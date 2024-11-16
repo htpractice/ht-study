@@ -1,0 +1,7 @@
+https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/service-resource/create_instances.html
+https://docs.oracle.com/en-us/iaas/tools/python/2.138.0/
+
+https://registry.terraform.io/providers/oracle/oci/latest/docs/resources/core_instance
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+
+https://developer.hashicorp.com/terraform/language/expressions/conditionals
