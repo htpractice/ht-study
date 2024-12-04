@@ -8,12 +8,12 @@
   - Traces
 
 # 3 key words for systemstate
-What? (what is happening to my systemstate?)
-- Metrics from servers or applications -> historical information provider
-Why? (why this is happening to my systemstate?)
-- Logging or logs obtained from servers or applications -> Logs from metrics i.e on how that event occur
-How? (how is this happening to my systemstate?)
-- Traces on how the error has occured -> starting from client side to endpoint in our applications.
+- What? (what is happening to my systemstate?)
+    Metrics from servers or applications -> historical information provider
+- Why? (why this is happening to my systemstate?)
+    Logging or logs obtained from servers or applications -> Logs from metrics i.e on how that event occur
+- How? (how is this happening to my systemstate?)
+    Traces on how the error has occured -> starting from client side to endpoint in our applications.
 
 
 # Metrics (Historic Data of the event )
