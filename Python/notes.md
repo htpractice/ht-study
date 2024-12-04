@@ -52,3 +52,18 @@ print (addition(5,10))  ---> Call the funtion with values inside ()
 - List -> []
 - Tupe -> ()
 - Set -> {} (This has intersection Uninon and Difference operations)
+
+# Data Structures
+- How the data is structured in application or python
+    - List
+    - Set
+    - Tuple
+    - Dictonaries
+
+# Data Types
+- What is the type of data 
+    - String
+    - Integer
+    - Float
+    - Decimal
+    - Boolean (true or false)
