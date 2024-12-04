@@ -6,4 +6,6 @@ COPY source dest
 
 RUN  pip install -r requirements.txt
 
+CMD [ "executable" ]
+
 ENTRYPOINT [ "executable" ]
