@@ -1,15 +1,18 @@
-## Notes for Observability
+# Notes for Observability
 
 - Monitoring and fixing the system state to maintain SLA is called obervability in nutshell.
 - Monitoring only covers 1 pillar of observability i.e Metrics and its associated dashboards.
-- Observability is made of three words Metrics Logging Traces
+- Observability is made of three pillars
+  - Metrics
+  - Logging
+  - Traces
 
-### 3 key words for systemstate
-# What? (what is happening to my systemstate?)
+# 3 key words for systemstate
+What? (what is happening to my systemstate?)
 - Metrics from servers or applications -> historical information provider
-# Why? (why this is happening to my systemstate?)
+Why? (why this is happening to my systemstate?)
 - Logging or logs obtained from servers or applications -> Logs from metrics i.e on how that event occur
-# How? (how is this happening to my systemstate?)
+How? (how is this happening to my systemstate?)
 - Traces on how the error has occured -> starting from client side to endpoint in our applications.
 
 
@@ -45,3 +48,7 @@
 # Types of exporter 
     - Node-exporter = added to all the nodes in cluster to get metrics like cpu, mem, disk etc
     - kube-state-exprter = added to all the kubernetes cluster to get metrics for pod
+
+# IMAGE
+![image](https://github.com/user-attachments/assets/2359f506-25cc-4281-8cf0-a0e087d97614)
+
