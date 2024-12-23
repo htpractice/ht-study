@@ -1,0 +1,25 @@
+🚀 Excited to Share My Latest AWS Project! 🎉
+
+I recently designed and implemented a RabbitMQ cluster setup using AWS EC2, Load Balancer (LB), and Security Groups (SG). The project incorporates a messaging queue architecture, along with monitoring components such as Prometheus and Grafana for real-time data visualisation.
+
+Here's a quick overview:
+
+✨ Architecture: Built a two-tier architecture, where RabbitMQ is deployed behind a Load Balancer, emitting metrics for Prometheus, which are beautifully visualised in Grafana.
+
+✨ Security:
+
+All components are deployed in a private VPC.
+
+Access is tightly controlled via Security Groups, allowing only the Bastion host's private IP to connect to the LB, RabbitMQ UI, Prometheus, and Grafana on respective ports.
+
+The Bastion host (Windows/Linux) resides in a public subnet and acts as the sole entry point for secure access.
+
+✨ Efficiency: Utilised Docker images for Prometheus and Grafana, leveraging their lightweight nature and ease of management.
+
+This project has been a fantastic learning experience, especially in terms of optimising security and scalability within AWS.
+
+Looking forward to hearing your thoughts or suggestions! 😊
+
+Thank you Sagar Utekar for providing this challenge I tried to combine Day9,Day10 and Day11 looking forward to solve some amazing daily challenges ahead.😊
+
+ #getfitwithsagar, #SRELife, #DevOpsForAll

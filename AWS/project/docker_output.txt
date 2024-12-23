@@ -1,0 +1,81 @@
+[ec2-user@ip-10-100-1-74 ~]$ docker run --name prometheus -d -p 127.0.0.1:9090:9090 prom/prometheus
+docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+See 'docker run --help'.
+[ec2-user@ip-10-100-1-74 ~]$ systemctl statud docker
+Unknown command verb statud.
+[ec2-user@ip-10-100-1-74 ~]$ systemctl status docker
+○ docker.service - Docker Application Container Engine
+     Loaded: loaded (/usr/lib/systemd/system/docker.service; disabled; preset: disabled)
+     Active: inactive (dead)
+TriggeredBy: ○ docker.socket
+       Docs: https://docs.docker.com
+[ec2-user@ip-10-100-1-74 ~]$ systemctl enable docker
+Failed to enable unit: Access denied
+[ec2-user@ip-10-100-1-74 ~]$ sudo systemctl enable docker
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /usr/lib/systemd/system/docker.service.
+[ec2-user@ip-10-100-1-74 ~]$ sudo systemctl start docker
+[ec2-user@ip-10-100-1-74 ~]$ docker run --name prometheus -d -p 127.0.0.1:9090:9090 prom/prometheus
+docker: permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Head "http://%2Fvar%2Frun%2Fdocker.sock/_ping": dial unix /var/run/docker.sock: connect: permission denied.
+See 'docker run --help'.
+[ec2-user@ip-10-100-1-74 ~]$ systemctl status docker
+● docker.service - Docker Application Container Engine
+     Loaded: loaded (/usr/lib/systemd/system/docker.service; enabled; preset: disabled)
+     Active: active (running) since Mon 2024-12-09 13:09:55 UTC; 12s ago
+TriggeredBy: ● docker.socket
+       Docs: https://docs.docker.com
+    Process: 27476 ExecStartPre=/bin/mkdir -p /run/docker (code=exited, status=0/SUCCESS)
+    Process: 27477 ExecStartPre=/usr/libexec/docker/docker-setup-runtimes.sh (code=exited, status=0/SUCCESS)
+   Main PID: 27478 (dockerd)
+      Tasks: 7
+     Memory: 29.7M
+        CPU: 266ms
+     CGroup: /system.slice/docker.service
+             └─27478 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --default-ulimit nofile=32768:65536
+
+Dec 09 13:09:54 ip-10-100-1-74.ec2.internal systemd[1]: Starting docker.service - Docker Application Container Engine...
+Dec 09 13:09:54 ip-10-100-1-74.ec2.internal dockerd[27478]: time="2024-12-09T13:09:54.617560322Z" level=info msg="Starting up"
+Dec 09 13:09:54 ip-10-100-1-74.ec2.internal dockerd[27478]: time="2024-12-09T13:09:54.658462652Z" level=info msg="Loading containers: start."
+Dec 09 13:09:55 ip-10-100-1-74.ec2.internal dockerd[27478]: time="2024-12-09T13:09:55.044539818Z" level=info msg="Loading containers: done."
+Dec 09 13:09:55 ip-10-100-1-74.ec2.internal dockerd[27478]: time="2024-12-09T13:09:55.063589247Z" level=info msg="Docker daemon" commit=b08a51f containerd-snapshotter=false storage-drive>
+Dec 09 13:09:55 ip-10-100-1-74.ec2.internal dockerd[27478]: time="2024-12-09T13:09:55.063810074Z" level=info msg="Daemon has completed initialization"
+Dec 09 13:09:55 ip-10-100-1-74.ec2.internal dockerd[27478]: time="2024-12-09T13:09:55.091539932Z" level=info msg="API listen on /run/docker.sock"
+Dec 09 13:09:55 ip-10-100-1-74.ec2.internal systemd[1]: Started docker.service - Docker Application Container Engine.
+[ec2-user@ip-10-100-1-74 ~]$ docker run --name prometheus -d -p 127.0.0.1:9090:9090 prom/prometheus
+docker: permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Head "http://%2Fvar%2Frun%2Fdocker.sock/_ping": dial unix /var/run/docker.sock: connect: permission denied.
+See 'docker run --help'.
+[ec2-user@ip-10-100-1-74 ~]$ sudo docker run --name prometheus -d -p 10.100.1.74:9090:9090 prom/prometheus
+Unable to find image 'prom/prometheus:latest' locally
+latest: Pulling from prom/prometheus
+9fa9226be034: Pull complete
+1617e25568b2: Pull complete
+9818abf4f966: Pull complete
+6e463c39e3fe: Pull complete
+a95abf182525: Pull complete
+bd0d00e67847: Pull complete
+1008d9ab3b47: Pull complete
+4a3328469f0b: Pull complete
+33efd2f692f0: Pull complete
+935db57dac66: Pull complete
+Digest: sha256:565ee86501224ebbb98fc10b332fa54440b100469924003359edf49cbce374bd
+Status: Downloaded newer image for prom/prometheus:latest
+7455015158cfff438e224b6bb0068a02466d38b516f675391bcdbf8404c3b7a4
+[ec2-user@ip-10-100-1-74 ~]$
+
+
+-------------------
+- Ran prometheus in a container and was able to reach it through web browser of my windows bastion using private IP of host
+- Exposed the port  of prometheus to listen on any server address.
+- bind-mount the directory containing prometheus.yml onto /etc/prometheus so that we can have access to prom files on local host
+- we are creating a local prometheus.yml with following config
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets:
+        - '10.100.1.210:15692'
+        - '10.100.1.28:15692'
+        - '10.100.1.221:15692'
+
+docker run --name prometheus -d -p 10.100.1.74:9090:9090 -v /root/prometheus/prometheus.yml:/etc/prometheus prom/prometheus
