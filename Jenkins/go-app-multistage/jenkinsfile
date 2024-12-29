@@ -1,0 +1,19 @@
+pipeline {
+    agent any
+
+    stages (
+        stage('Dev'){
+            steps {
+                // Get some code from a github repositiory
+                git 'https://github.com/kodekloudhub/go-webapp-sample.git'
+            }
+        }
+
+        stage('UAT'){
+            steps{
+                // Get some code from a github repositiory
+                git 'https://github.com/kodekloudhub/go-webapp-sample.git'
+            }
+        }
+    )
+}
