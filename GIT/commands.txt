@@ -34,6 +34,8 @@ add user and email
 
 decorate the output from log
     git log --graph --decorate
+name of the files changed
+    git log --name-only
 
 review branches
    git branch -a
