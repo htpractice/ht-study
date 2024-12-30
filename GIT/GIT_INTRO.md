@@ -1,5 +1,11 @@
 # INTRODUCTION
-- Understanding the two types of Git repositories—local and remote—and the stages of files within a local repository.
+- Git is a distributed version control system. It is a tool used to manage the project’s source code history.
+- The characteristics of Git are as follows:
+    - Provide strong support for non-linear development
+    - Are fully distributed
+    - Can efficiently handle large projects
+    - Have a simple design
+- There are two types of Git repositories—local and remote—and the stages of files within a local repository.
 - Team members can create their own local repositories and pull data from the remote repository to start working on a project.
 - Changes made by team members can be pushed to the remote repository to keep both local and remote repositories synchronized.
 
@@ -46,8 +52,8 @@ different stages a file can be in while using Git, including how to create, stag
     - Avoid committing unrelated changes together, as this can complicate the commit history and make it harder to revert specific changes.
 
 - Managing untracked files
-    - If you accidentally stage a personal file, you can remove it from tracking using git rm --cached <file>, which keeps the file in your directory but removes it from Git's tracking.
-    - To permanently ignore certain files, you can use a .gitignore file, which should be saved in the repository for team collaboration.
+    - If you accidentally stage a personal file, you can remove it from tracking using *git rm --cached <file>*, which keeps the file in your directory but removes it from Git's tracking.
+    - To permanently ignore certain files, you can use a *.gitignore* file, which should be saved in the repository for team collaboration.
 
 # Practices of GIT COMMIT:
 - Good Practices:
