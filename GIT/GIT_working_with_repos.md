@@ -42,19 +42,52 @@
 - INTRODUCTION: 
     This material focuses on the process of merging branches in Git, specifically how to integrate changes from a feature branch into the master branch using the `git merge` command.
 
+    Recursive is the default merge strategy when pulling or merging one branch. It generally is used  when more than one common ancestor is present in the commit history. 
+
 - Merging branches in Git
     - To merge a feature branch (e.g., `feature/sign up`) into the master branch, you first need to check out the master branch and then use the command `git merge feature/sign up`.
+    -  Recursive is the default merge strategy when pulling or merging one branch.
     - There are two types of merges: fast forward and no fast forward.
 
 - Fast forward merge
     - A fast forward merge occurs when the current branch has no additional commits compared to the branch being merged. In this case, Git directly integrates the commits without creating a new commit.
     - This type of merge is efficient and keeps the commit history clean, as it simply moves the master branch pointer forward.
+    - Example:
+        main: A → B  
+        feature: A → B → C  
+      Merging feature into main will move the pointer of main to C.
+        main: A → B → C  
 
 - No fast forward merge
     - A no fast forward merge happens when there are additional commits on the current branch. Git creates a new merge commit that points to both the current branch and the branch being merged.
     - This ensures that all changes are preserved, and the master branch now contains all the updates from the feature branch.
+    - Example
+        main: A → B → D  
+        feature: A → B → C
+      After Merging
+        main: A → B → D → M (merge commit)  
+                         ↘ C
 
-Remember, practice is key! Engage with the labs to solidify your understanding of these concepts. You're doing great, and I'm here to support your learning journey!
+
+- Merge Strategies:
+    - recursive (Default for Branches):
+        Used when merging two branches with a common ancestor.
+        Handles 3-way merges and detects renamed files.
+    - resolve:
+        Simpler than recursive.
+        Can merge only 2 branches and does not detect renamed files.
+        Used for very basic cases.
+    - octopus:
+        Used for merging more than two branches at the same time.
+        Does not allow conflicts—if there are conflicts, it will abort.
+    - ours:
+        Keeps changes from the current branch and ignores changes from the other branch.
+        Useful for keeping current branch history while integrating others.
+    - theirs: (not a strategy but an option for recursive)
+        Opposite of ours. Accepts changes from the incoming branch.
+    - subtree:
+        Used for subtree merges when working with repositories split into multiple subtrees.
+    
 
 # Working with Remote Repositories
 - Introduction:
@@ -109,6 +142,8 @@ Remember, practice is key! Engage with the labs to solidify your understanding o
                 =======
                 Their changes
                 >>>>>>> branch-name
+        
+        The block between ======= and >>>>>>> represents the code in the feature branch, which needs to be merged with the master branch.
 
     3. **Review the Changes**:
         Look at the changes made by both parties. Decide which changes to keep or how to combine them.
@@ -163,3 +198,69 @@ Remember, practice is key! Engage with the labs to solidify your understanding o
             - Click on the Pull Requests tab.
             - Click on New Pull Request.
             - Select your branch from the forked repository and submit the pull request.
+- Rebasing
+- **Git rebase** is a powerful Git command that allows you to rewrite the commit history of a branch. It's primarily used to integrate changes from one branch into another, similar to `git merge`, but with a key difference: it creates a linear, cleaner project history.
+- Rebasing takes a series of commits from one branch and replays them onto another branch, as if you had branched off from the target branch at the latest commit.
+- This results in a linear commit history without any merge commits, making it easier to follow the project's development.
+- **Use cases:**
+    - **Cleaning up feature branches:** Before merging a feature branch into the main branch, you can rebase it onto the main branch to ensure a linear history and avoid unnecessary merge commits.
+   - **Updating a feature branch:** If the main branch has been updated since you created your feature branch, you can rebase your feature branch onto the main branch to incorporate those changes.
+    - **Modifying commit history:** Rebasing allows you to edit, squash, or reorder commits in your branch before merging.
+
+    **Basic commands:**
+
+    - **`git rebase <branch>`:** Rebases your current branch onto the specified branch.
+    - **`git rebase -i <branch>`:** Starts an interactive rebase, allowing you to edit commits.
+
+    **Benefits:**
+
+    - **Cleaner history:** Creates a linear project history that is easier to read and understand.
+    - **Simplified workflows:** Can simplify workflows by avoiding complex merge histories.
+    - **Improved readability:** Makes it easier to track changes and identify when specific features were introduced.
+
+    **Cautions:**
+
+    - **Rewrites history:** Rebasing rewrites commit history, which can cause issues if you've already pushed your branch to a shared repository. Avoid rebasing public branches.
+    - **Can be complex:** Interactive rebasing can be complex and requires careful attention.
+
+    **Example:**
+
+    Let's say you have a `main` branch and a `feature` branch. You want to integrate the changes from `feature` into `main` using rebase:
+
+    1.  **Checkout the `feature` branch:** `git checkout feature`
+    2.  **Rebase onto `main`:** `git rebase main`
+    3.  **If there are conflicts, resolve them and then:** `git add <resolved files>` and `git rebase --continue`
+    4.  **Once the rebase is complete, checkout `main`:** `git checkout main`
+    5.  **Merge the `feature` branch (which is now up-to-date and linear):** `git merge feature`
+
+- Stashing
+    **Git stash** is a powerful command in Git that allows you to temporarily save changes you've made to your working directory without committing them. This is particularly useful when you need to switch to a different branch or work on a different task but are not ready to commit your current changes.
+
+**Use cases:**
+
+* **Switching branches:** If you're in the middle of making changes and need to switch to a different branch to fix a bug or work on a new feature, you can use `git stash` to save your changes, switch branches, and then later reapply your changes.
+* **Handling urgent issues:** If an urgent issue arises that requires immediate attention, you can stash your current work, address the urgent issue, and then return to your previous task without losing your progress.
+* **Keeping a clean working directory:** Sometimes you might want to experiment with some code changes without cluttering your commit history. `git stash` allows you to do this by temporarily saving your changes.
+
+**How it works:**
+
+* The `git stash` command takes your uncommitted changes (both staged and unstaged) and saves them in a stack called the "stash list".
+* It then reverts your working directory to the state of the last commit, giving you a clean working directory.
+* You can then switch branches, work on other tasks, and later reapply your stashed changes.
+
+**Basic commands:**
+
+* **`git stash` or `git stash push`:** Stashes your current changes with an optional message.
+* **`git stash list`:** Lists all your stashed changes.
+* **`git stash pop`:** Applies the most recent stash and removes it from the stash list.
+* **`git stash apply`:** Applies the most recent stash but keeps it in the stash list.
+* **`git stash drop`:** Removes a specific stash from the stash list.
+* **`git stash clear`:** Removes all stashes.
+
+**Benefits:**
+
+* **Convenience:** `git stash` provides a convenient way to save and restore changes without committing them.
+* **Flexibility:** It allows you to easily switch between different tasks and branches without losing your work.
+* **Cleanliness:** It helps keep your commit history clean by avoiding unnecessary commits.
+
+Overall, `git stash` is a valuable tool for any Git user, providing a simple and efficient way to manage uncommitted changes and maintain a clean working directory.

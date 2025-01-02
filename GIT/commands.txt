@@ -40,9 +40,20 @@ name of the files changed
 review branches
    git branch -a
    (The remote branches have the prefix remotes)
+list merged branch
+   git branch --merged
+list no merged branch
+   git branch --no-merged
 
 Remote repo management
    - Add remote repo to local
       git remote add origin <connection-string> 
    - List all remote repo in GIT project
       git remote -v
+Stashing (saving the staged and unstaged changes to working directory)
+   - git stash or git stash push: Stashes your current changes with an optional message.   
+   - git stash list: Lists all your stashed changes.   
+   - git stash pop: Applies the most recent stash and removes it from the stash list.   
+   - git stash apply: Applies the most recent stash but keeps it in the stash list.   
+   - git stash drop: Removes a specific stash from the stash list.   
+   - git stash clear: Removes all stashes.   
