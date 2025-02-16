@@ -1,0 +1,16 @@
+FROM python:3.7
+
+WORKDIR /app
+
+COPY hello.py /app/hello.py
+
+#RUN  pip install -r requirements.txt
+
+#exposes port 80 internally for container to conatiner communication
+EXPOSE 80 
+
+#CMD in dockerfile is important, because it is PID1 and if it fails or exists for any reason container will crash. - This will be a paramter
+CMD [ "python3 hello.py" ]
+
+#Functionality is same as CMD but can't be override or change from commandline unlike CMD - This will be P1
+ENTRYPOINT [ "executable" ]
