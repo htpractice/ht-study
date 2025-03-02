@@ -148,3 +148,8 @@ terraform/
 
         2 . Configure strict IAM rules and have super user to manage the resources ... may be allow users to have use access.
             Setup audit logs and maybe we can setup some automation via functions if there is any manual change is made and if the resource is managed by terraform, and who made it, immediately notify.
+
+# Tainted resource in terraform
+- Whenevr tf apply runs it will recreate that particular resource, ex: ec2 is created but provisioner fails in such case ec2 is marked with taint.
+
+# Lifecycle rules in terraform.
