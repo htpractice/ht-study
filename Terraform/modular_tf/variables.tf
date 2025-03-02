@@ -54,3 +54,8 @@ variable "instance_map" {
     #"us-east-1c" = "2"
   }
 }
+
+variable "key_name" {
+  description = "The key name to use for the instance"
+  default = "aws_lab_key"
+}
