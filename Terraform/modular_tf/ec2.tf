@@ -8,7 +8,7 @@ module "bastion_ec2" {
   name                   = "${var.environment}-bastion-${each.value + 1}"
   ami                    = var.ami
   instance_type          = var.instance_type
-  key_name               = "practice-lab-01"
+  key_name               = var.key_name
   subnet_id              = module.vpc.public_subnets[each.value]
   vpc_security_group_ids     = [module.lab_security_group.security_group_id]
   associate_public_ip_address = true
