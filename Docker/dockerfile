@@ -1,9 +1,13 @@
-FROM python:3.7
+FROM ubuntu
 
-WORKDIR /app
+ADD index.html index.html
 
-COPY source dest
+RUN apt-get update
 
-RUN  pip install -r requirements.txt
+RUN apt-get install nginx -y
 
-ENTRYPOINT [ "executable" ]
+RUN apt-get install vim -y
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

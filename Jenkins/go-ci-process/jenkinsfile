@@ -1,0 +1,20 @@
+pipeline {
+    agent any
+    tools {
+        // same name of installation should be present in Tools here it is go so make sure go has installation with name go-1.23.4
+        go 'go-1.23.4'
+    }
+
+    environment {
+        GO111MODULE='on'
+    }
+
+    stages {
+        stage ('Test') {
+            steps {
+                git 'https://github.com/kodekloudhub/go-webapp-sample.git'
+                sh 'go test ./...'
+            }
+        }
+    }
+}

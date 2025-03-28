@@ -1,0 +1,46 @@
+pipeline {
+    // Specifies where the pipeline should run
+    agent {
+        label {
+            // Use a specific agent labeled 'master'
+            label 'master'
+            customWorkspace "${JENKINS_HOME}/${BUILD_NUMBER}/"
+        }
+    }
+    //Defined global variables accessible across all pipeline stages, here we used GO speciifc env
+    environment {
+        Go111MODULE='on'
+    }
+    //Logical blocks of pipeline yhat group steps together.
+    stages {
+        stage ('Clone') {
+            //Individual tasks executed within a stage, like running git clone
+            steps {
+                git 'https://github.com/kodekloudhub/go-webapp-sample.git'
+            }
+        }
+
+        stage ('Build') {
+            steps {
+                script {
+                    app = docker.build("adminturneddevops/go-webapp-sample")
+                }
+            }
+        }
+        
+        stage ('Deploy') {
+            steps {
+                    sh "docker run -p 8090:8000 -d adminturneddevops/go-webapp-sample"
+            }
+        }
+    }
+    //Defines actions after pipeline execution
+    post {
+        success {
+            echo 'Pipeline completed successfully'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

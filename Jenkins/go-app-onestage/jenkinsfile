@@ -1,0 +1,12 @@
+pipeline {
+    agent any
+
+    stages (
+        stage('Build'){
+            steps {
+                // Get some code from a github repositiory
+                git 'https://github.com/kodekloudhub/go-webapp-sample.git'
+            }
+        }
+    )
+}

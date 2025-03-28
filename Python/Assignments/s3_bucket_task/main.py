@@ -54,7 +54,8 @@ def size_check():
     return
 
 def main():
-    print ("bucket summary")
+    print ("Select from options")
+    response = input("Press 1 to print bucket summary")
     print ("----------------------------------------------------------")
     for details in bucket_details():
         print ("\nName : {0}, \nRegion : {1}, \nSizeGB : {2}, \nVersioning : {3}\n---------".format(details['name'],details['region'],details['sizeGB'],details['versioning']))
