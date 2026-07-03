@@ -1,0 +1,15 @@
+# three node (two workers) cluster config for kind cluster 
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+
+
+# where one is the control plane and two are workers and to call it "kind-multi-node" 
+# the context need to be set by joining two worker nodes to control plane node.
+# create a new context by running the following command:
+# kind create cluster --config multi-node.yaml --name kind-multi-node
+# then set the context by running the following command (switch to the cluster):
+# kubectl config use-context kind-multi-node

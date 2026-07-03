@@ -1,0 +1,22 @@
+# creating a replication controller with name nginx-rc
+# This is a sample replication controller yaml which is used to create and manage a replication created by itself not other controllers.
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx-rc
+  labels:
+     env: demo
+spec:
+  template:
+     metadata:
+      name: nginx-pod
+      labels:
+         env: demo
+         type: frontend
+     spec:
+      containers:
+      - name: nginx-container
+        image: nginx
+        ports:
+        - containerPort: 80
+  replicas: 3
