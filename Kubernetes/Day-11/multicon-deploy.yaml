@@ -1,0 +1,33 @@
+# Backend Deployment for Day 11 init-container lab.
+# Creates nginx pods that the Service (multi-cont-svc) will expose.
+# Labels use app: multi-con-demo-nginx — intentionally different from the init pod (env: multi-con-demo).
+#
+# Apply before: multi-con-svc.yaml, muti-conatiner-pod.yaml
+# Generate base: kc create deployment multi-con-deploy --image=nginx -n multicon --dry-run=client -o yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: multicon
+  name: multi-con-deploy
+  labels:
+    env: multi-con-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: multi-con-demo-nginx
+  template:
+    metadata:
+      labels:
+        app: multi-con-demo-nginx
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        resources:
+          limits:
+            memory: "128Mi"
+          requests:
+            memory: "64Mi"
+        ports:
+        - containerPort: 80

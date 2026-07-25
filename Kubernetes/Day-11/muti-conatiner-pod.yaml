@@ -1,0 +1,38 @@
+# Multi-container Pod with init container — Day 11 hands-on lab.
+#
+# Workflow:
+#   1. Apply multicon-ns.yaml, multicon-deploy.yaml, multi-con-svc.yaml first.
+#   2. Init container loops nslookup until multi-cont-svc.multicon.svc.cluster.local resolves.
+#   3. Init exits (Completed); main app-container starts (Running).
+#
+# Labels (env: multi-con-demo) differ from Deployment (app: multi-con-demo-nginx) on purpose —
+# this pod is a consumer of the Service, not a backend endpoint behind it.
+#
+# Debug:
+#   kc logs multi-con-pod -n multicon -c init-svc-check-container
+#   kc logs multi-con-pod -n multicon -c app-container
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-con-pod
+  namespace: multicon
+  labels:
+    env: multi-con-demo
+spec:
+  initContainers:
+  - name: init-svc-check-container
+    image: busybox:latest
+    command: ['sh', '-c']
+    args:
+    - |
+      until nslookup multi-cont-svc.multicon.svc.cluster.local; do
+        echo waiting for the service to be up
+        sleep 2
+      done
+  containers:
+  - name: app-container
+    image: busybox:latest
+    command: ['sh', '-c', 'echo the app is running && sleep 3600']
+    env:
+    - name: FIRSTNAME
+      value: "harshal"

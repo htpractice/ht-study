@@ -1,0 +1,19 @@
+# ClusterIP Service exposing the nginx Deployment in multicon namespace.
+# Selector matches Deployment pod labels (app: multi-con-demo-nginx), NOT the init pod.
+#
+# DNS created: multi-cont-svc.multicon.svc.cluster.local
+# The init container in muti-conatiner-pod.yaml loops nslookup on this FQDN until ready.
+#
+# Imperative equivalent:
+#   kc expose deployment multi-con-deploy -n multicon --name=multi-cont-svc --port=80 --target-port=80
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-cont-svc
+  namespace: multicon
+spec:
+  selector:
+    app: multi-con-demo-nginx
+  ports:
+  - port: 80
+    targetPort: 80
