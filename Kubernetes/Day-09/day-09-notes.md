@@ -8,16 +8,16 @@ Deployments manage pods, but these pods are ephemeral and have dynamic IPs. Serv
 
 - **In Kubernetes, services are used to provide stable network endpoints for your pods, which are otherwise ephemeral and have changing IP addresses. Here are the four main types discussed in the video:**
 
-*   **NodePort (0:04:16 - 0:08:45):** This type exposes your service on a specific, static port on every *Node's* IP address in the cluster. It allows you to reach the service from outside the cluster by accessing `<NodeIP>:<NodePort>`. The valid range for this port is **30000–32767**. 
+- **NodePort (0:04:16 - 0:08:45):** This type exposes your service on a specific, static port on every *Node's* IP address in the cluster. It allows you to reach the service from outside the cluster by accessing `<NodeIP>:<NodePort>`. The valid range for this port is **30000–32767**. 
+- **ClusterIP (30:25 - 37:40):** This is the **default** service type. It assigns an internal IP address to the service that is only reachable from *within* the cluster. This is ideal for internal communication, such as a frontend pod needing to talk to a backend pod or a database service.
+  - existing pod with selector lables will be assigned as endoint to the service
+  - no relation with deployments.
+  - Deployment creates Pods with env: demo
+    Service finds those same Pods by label
+    No direct link between Service ↔ Deployment — only shared Pod labels
 
-
-*   **ClusterIP (30:25 - 37:40):** This is the **default** service type. It assigns an internal IP address to the service that is only reachable from *within* the cluster. This is ideal for internal communication, such as a frontend pod needing to talk to a backend pod or a database service.
-
-
-*   **LoadBalancer (37:43 - 43:50):** This type is used to provision an external load balancer from your cloud provider (like *AWS*, *Azure*, or *GCP*). It provides a single stable URL or IP to the end-user and automatically distributes incoming traffic across the backend pods. In local environments like *kind*, it often defaults to behaving like a *NodePort* unless specifically configured otherwise.
-
-
-*   **ExternalName (43:51 - 44:48):** This type is unique because it doesn't use standard pod selectors. Instead, it maps the service to a specific **DNS name** (like an external database endpoint). This allows internal pods to refer to an external resource by a simple, stable service name.
+- **LoadBalancer (37:43 - 43:50):** This type is used to provision an external load balancer from your cloud provider (like *AWS*, *Azure*, or *GCP*). It provides a single stable URL or IP to the end-user and automatically distributes incoming traffic across the backend pods. In local environments like *kind*, it often defaults to behaving like a *NodePort* unless specifically configured otherwise.
+- **ExternalName (43:51 - 44:48):** This type is unique because it doesn't use standard pod selectors. Instead, it maps the service to a specific **DNS name** (like an external database endpoint). This allows internal pods to refer to an external resource by a simple, stable service name.
 
 
 
