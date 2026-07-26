@@ -1,0 +1,6 @@
+# Namespace for Day 12 DaemonSet lab (node-exporter monitoring agent).
+# Generate clean manifest: kc create namespace daemon-monitoring --dry-run=client -o yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: daemon-monitoring
