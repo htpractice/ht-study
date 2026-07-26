@@ -1,6 +1,9 @@
 # Backend Deployment for Day 11 init-container lab.
-# Creates nginx pods that the Service (multi-cont-svc) will expose.
+# Multi-container pod: nginx (app) + redis (db) in the same pod template.
 # Labels use app: multi-con-demo-nginx — intentionally different from the init pod (env: multi-con-demo).
+#
+# Lesson learned: mysql:latest needs env vars (MYSQL_ROOT_PASSWORD) and more memory —
+# switched to redis:latest for a simpler db sidecar in local Kind practice.
 #
 # Apply before: multi-con-svc.yaml, muti-conatiner-pod.yaml
 # Generate base: kc create deployment multi-con-deploy --image=nginx -n multicon --dry-run=client -o yaml
@@ -31,3 +34,12 @@ spec:
             memory: "64Mi"
         ports:
         - containerPort: 80
+      - name: db-container
+        image: redis:latest
+        resources:
+          limits:
+            memory: "128Mi"
+          requests:
+            memory: "64Mi"
+        ports:
+        - containerPort: 6379
