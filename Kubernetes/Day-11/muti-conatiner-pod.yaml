@@ -1,16 +1,21 @@
-# Multi-container Pod with init container — Day 11 hands-on lab.
+# Multi-container Pod with two sequential init containers — Day 11 hands-on lab.
 #
 # Workflow:
 #   1. Apply multicon-ns.yaml, multicon-deploy.yaml, multi-con-svc.yaml first.
-#   2. Init container loops nslookup until multi-cont-svc.multicon.svc.cluster.local resolves.
-#   3. Init exits (Completed); main app-container starts (Running).
+#   2. Init 1 (init-svc-check-container): nslookup multi-cont-svc until DNS resolves.
+#   3. Init 2 (init-dbsvc-check-container): nslookup multi-cont-dbsvc until DNS resolves.
+#   4. Both inits exit (Completed); main app-container starts (Running).
 #
-# Labels (env: multi-con-demo) differ from Deployment (app: multi-con-demo-nginx) on purpose —
-# this pod is a consumer of the Service, not a backend endpoint behind it.
+# Init containers run in manifest order — second waits for first to complete.
+# nslookup proves Service DNS exists, NOT that redis/mysql is accepting connections.
+#
+# Labels (env: multi-con-demo) differ from Deployment (app: multi-con-demo-nginx) on purpose.
 #
 # Debug:
 #   kc logs multi-con-pod -n multicon -c init-svc-check-container
+#   kc logs multi-con-pod -n multicon -c init-dbsvc-check-container
 #   kc logs multi-con-pod -n multicon -c app-container
+#   kc logs <deploy-pod> -n multicon -c db-container --previous   # CrashLoopBackOff
 apiVersion: v1
 kind: Pod
 metadata:
@@ -26,7 +31,16 @@ spec:
     args:
     - |
       until nslookup multi-cont-svc.multicon.svc.cluster.local; do
-        echo waiting for the service to be up
+        echo waiting for web service DNS
+        sleep 2
+      done
+  - name: init-dbsvc-check-container
+    image: busybox:latest
+    command: ['sh', '-c']
+    args:
+    - |
+      until nslookup multi-cont-dbsvc.multicon.svc.cluster.local; do
+        echo waiting for db service DNS
         sleep 2
       done
   containers:
