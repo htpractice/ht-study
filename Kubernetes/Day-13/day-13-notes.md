@@ -174,7 +174,36 @@ Namespaces isolate; labels organize. Use both together.
 
 ---
 
-## 6. CKA Exam Tips
+## 6. Hands-on Lab (sample manifests)
+
+| File | Purpose | How to use |
+|------|---------|------------|
+| `manual-schedule-pod.yaml` | `nodeName` + labels + annotations | Edit node name → `kc apply -f` |
+| `static-pod-example.yaml` | Static pod reference | Copy to node `/etc/kubernetes/manifests/` — **not** `kubectl apply` |
+
+### Manual scheduling (Kind-friendly)
+
+```bash
+kc get nodes
+# edit manual-schedule-pod.yaml: replace <node-name> with e.g. kind-worker
+kc apply -f manual-schedule-pod.yaml
+kc get pod manual-nginx -o wide
+kc get pods -l env=day13-lab
+```
+
+### Static pod (read-only reference on Kind)
+
+```bash
+# Simulate CKA: exec into control-plane node, place manifest on disk
+docker ps | grep control-plane
+docker exec -it <control-plane-id> bash
+# create /etc/kubernetes/manifests/static-nginx.yaml from static-pod-example.yaml
+kc get pods -A | grep static-nginx
+```
+
+---
+
+## 7. CKA Exam Tips
 
 - Static pod issues → SSH to control-plane node → check `/etc/kubernetes/manifests`
 - Pod stuck Pending → scheduler health, resources, taints, or use `nodeName` if exam requires it
@@ -184,7 +213,7 @@ Namespaces isolate; labels organize. Use both together.
 
 ---
 
-## Reference
+## 8. Reference
 
 - [Static Pods](https://kubernetes.io/docs/concepts/workloads/pods/#static-pods)
 - [Assign Pods to Nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
