@@ -1,0 +1,35 @@
+# Toleration lab — allows pod to schedule on nodes tainted gpu=true:NoSchedule
+#
+# Taint the node first:
+#   kc taint node <node-name> gpu=true:NoSchedule
+#
+# Without toleration, new pods won't schedule on that node.
+# With toleration, this pod CAN — but is not forced to (other untainted nodes still work).
+#
+# Generate base:
+#   kc run tolleration-pod --image=nginx --dry-run=client -o yaml > tolleration-pod.yaml
+#
+# Remove taint:
+#   kc taint node <node-name> gpu=true:NoSchedule-
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: tolleration-pod
+  name: tolleration-pod
+spec:
+  containers:
+  - image: nginx
+    name: tolleration-pod
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 100m
+      limits:
+        memory: 128Mi
+        cpu: 200m
+  tolerations:
+  - key: "gpu"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
