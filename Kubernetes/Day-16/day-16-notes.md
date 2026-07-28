@@ -62,14 +62,35 @@ cpu: 500m        # correct — millicores
 | **Memory** | Container **OOMKilled** → restart → CrashLoopBackOff if repeated |
 | **CPU** | **Throttled** (slowed down) — not killed |
 
-**Day 16 lab:** `limit-pod.yaml` uses `polinux/stress` to **intentionally exceed** limits:
+**Day 16 lab:** `limit-pod.yaml` uses `polinux/stress` to **intentionally exceed** memory limit:
 
 | Setting | Value | Stress tries | Result |
 |---------|-------|--------------|--------|
-| memory limit | `150Mi` | `--vm-bytes 250Mi` | Exceeds limit → container dies |
-| cpu limit | `500m` | `--cpu 1` | Throttled (1 core requested, half allowed) |
+| memory limit | `150Mi` | `--vm 1 --vm-bytes 200Mi` | Exceeds limit → **OOMKilled** (exit 137) |
 
-See `practice-output.md` — `CrashLoopBackOff`, `QoS Class: Burstable`.
+**Common mistake:** `--vm-bytes` without `--vm 1` does **not** start memory workers — only CPU/other flags run. You get `Exit Code 1` / `Reason: Error`, not `OOMKilled`. Always pair `--vm N` with `--vm-bytes`.
+
+```yaml
+args:
+- --vm
+- "1"
+- --vm-bytes
+- "200Mi"
+- --vm-hang
+- "1"
+```
+
+**What to expect in `describe pod` when OOM works:**
+
+```text
+Last State:  Terminated
+Reason:      OOMKilled
+Exit Code:   137
+```
+
+**Pending** is unrelated — that means scheduling failed, not memory enforcement.
+
+See `practice-output.md` — original run showed Error/1 (missing `--vm`); fixed manifest should show OOMKilled.
 
 ---
 

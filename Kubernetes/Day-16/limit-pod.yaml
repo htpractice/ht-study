@@ -1,8 +1,10 @@
 # Stress pod — intentionally exceeds memory limit to demonstrate OOM enforcement.
 #
 # Resources vs stress args (the mismatch is on purpose):
-#   memory limit: 150Mi     stress --vm-bytes: 250Mi  → EXCEEDS → OOM / CrashLoopBackOff
-#   cpu limit:    500m      stress --cpu: 1           → throttled (not killed)
+#   memory limit: 150Mi     stress --vm 1 --vm-bytes 200Mi  → EXCEEDS → OOMKilled (exit 137)
+#
+# IMPORTANT: --vm-bytes alone does NOT allocate memory — you MUST add --vm 1 (worker count).
+# Without --vm, only --cpu runs; you get Exit Code 1 / Error, NOT OOMKilled.
 #
 # requests: 50Mi/250m  — what scheduler reserves on the node
 # limits:   150Mi/500m — hard cap enforced by kubelet/cgroups
@@ -27,10 +29,10 @@ spec:
     image: polinux/stress
     command: ["stress"]
     args:
-    - --cpu
+    - --vm
     - "1"
     - --vm-bytes
-    - "250Mi"
+    - "200Mi"
     - --vm-hang
     - "1"
     resources:
