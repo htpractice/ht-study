@@ -1,18 +1,43 @@
-# HorizontalPodAutoscaler — scale php-apache Deployment on CPU utilization
+# =============================================================================
+# HorizontalPodAutoscaler (HPA) — Interview Quick Reference
+# =============================================================================
 #
-# Target: 50% of cpu REQUEST (200m) → scale when avg pod CPU > 100m
-# minReplicas: 1, maxReplicas: 10
+# PREREQUISITES:
+#   - Metrics Server installed (kc top pods works)
+#   - Pod containers MUST have resources.requests.cpu (utilization % = usage/request)
+#   - scaleTargetRef → Deployment/ReplicaSet/StatefulSet
 #
-# Scale UP: fast when load generator runs (wget loop to php-apache Service)
-# Scale DOWN: slow — default 5min stabilization window; STOP load first, then wait
+# REPLICA FORMULA (interview):
+#   desiredReplicas = ceil(currentReplicas × currentMetric / targetMetric)
+#   Example: 2 replicas @ 100% CPU, target 50% → ceil(2 × 100/50) = 4
 #
-# Generate:
+# CPU TARGET:
+#   averageUtilization: 50  →  scale when avg pod CPU > 50% of REQUEST (not limit)
+#   php-apache request=200m → scales when avg > 100m
+#
+# BEHAVIOR (autoscaling/v2 only):
+#   stabilizationWindowSeconds — wait before applying scale decision (anti-flap)
+#     scaleDown default: 300s (5 min)  |  scaleUp default: 0s (immediate)
+#   policies — max change per period:
+#     type: Percent | Pods   value: N   periodSeconds: N
+#   selectPolicy:
+#     Max      — pick policy allowing BIGGEST change (default) ✓
+#     Min      — pick most conservative policy
+#     Disabled — NO scaling in that direction ✗ (common mistake!)
+#
+# LAB — scale up:
+#   kubectl run load-generator --rm -it --image=busybox:1.28 -n hpa-vpa -- \
+#     /bin/sh -c "while sleep 0.01; do wget -q -O- http://php-apache; done"
+#
+# LAB — scale down:
+#   1. Ctrl+C load generator
+#   2. Wait stabilizationWindowSeconds (60s below, not default 300s)
+#   kc get hpa php-apache -n hpa-vpa -w
+#
+# GENERATE BASE YAML (CKA exam):
 #   kc autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10 \
 #     -n hpa-vpa --dry-run=client -o yaml > hpa.yml
-#
-# Watch:
-#   kc get hpa php-apache -n hpa-vpa -w
-#   kc describe hpa php-apache -n hpa-vpa
+# =============================================================================
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -32,3 +57,19 @@ spec:
       target:
         type: Utilization
         averageUtilization: 50
+  # behavior is a SIBLING of metrics — NOT nested inside target
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      selectPolicy: Max

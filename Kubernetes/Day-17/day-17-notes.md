@@ -63,7 +63,7 @@ kc get hpa php-apache -n hpa-vpa -w
 kc describe hpa php-apache -n hpa-vpa    # Events show scaling decisions
 ```
 
-Optional — faster scale-down for testing (add to HPA spec):
+Optional — faster scale-down for lab/testing (see `hpa.yml`):
 
 ```yaml
 behavior:
@@ -73,7 +73,19 @@ behavior:
     - type: Percent
       value: 50
       periodSeconds: 60
+    selectPolicy: Max                # NEVER use Disabled — that blocks scaling entirely
+  scaleUp:
+    stabilizationWindowSeconds: 0    # immediate scale-up
+    selectPolicy: Max
 ```
+
+### selectPolicy interview trap
+
+| Value | Effect |
+|-------|--------|
+| **Max** | Use policy allowing largest scale change (default) |
+| **Min** | Most conservative policy |
+| **Disabled** | **Blocks all scaling in that direction** — not "disable stabilization" |
 
 ---
 
