@@ -1,0 +1,44 @@
+# REQUIRED node affinity — disktype In [ssd]
+#
+# Pod schedules ONLY on nodes with disktype=ssd. No match → Pending.
+# Lab: label cka-cluster01-worker disktype=ssd (worker2 has ssd-nvme, not ssd)
+# Result: all 3 replicas landed on cka-cluster01-worker only (see practice-output.md)
+#
+# Generate base:
+#   kc create deployment affinity-pod --image=nginx -n affinity --dry-run=client -o yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: affinity-pod
+  name: affinity-pod
+  namespace: affinity
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: affinity-pod
+  template:
+    metadata:
+      labels:
+        app: affinity-pod
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                - ssd
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi

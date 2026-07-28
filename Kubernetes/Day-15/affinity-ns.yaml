@@ -1,0 +1,5 @@
+# Namespace for Day 15 node affinity lab.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: affinity
