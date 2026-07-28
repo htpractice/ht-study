@@ -1,0 +1,45 @@
+# Official Kubernetes HPA example — php-apache Deployment + Service
+#
+# requests.cpu: 200m is REQUIRED — HPA calculates utilization as % of request
+# limits.cpu: 500m caps max CPU per pod
+#
+# Apply before hpa.yml:
+#   kc apply -f hpa-vpa-ns.yaml
+#   kc apply -f hpa-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+  namespace: hpa-vpa
+spec:
+  selector:
+    matchLabels:
+      run: php-apache
+  template:
+    metadata:
+      labels:
+        run: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: registry.k8s.io/hpa-example
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 200m
+          limits:
+            cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache
+  namespace: hpa-vpa
+  labels:
+    run: php-apache
+spec:
+  ports:
+  - port: 80
+  selector:
+    run: php-apache

@@ -1,0 +1,34 @@
+# HorizontalPodAutoscaler — scale php-apache Deployment on CPU utilization
+#
+# Target: 50% of cpu REQUEST (200m) → scale when avg pod CPU > 100m
+# minReplicas: 1, maxReplicas: 10
+#
+# Scale UP: fast when load generator runs (wget loop to php-apache Service)
+# Scale DOWN: slow — default 5min stabilization window; STOP load first, then wait
+#
+# Generate:
+#   kc autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10 \
+#     -n hpa-vpa --dry-run=client -o yaml > hpa.yml
+#
+# Watch:
+#   kc get hpa php-apache -n hpa-vpa -w
+#   kc describe hpa php-apache -n hpa-vpa
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+  namespace: hpa-vpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
