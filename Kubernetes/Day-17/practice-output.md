@@ -26,3 +26,21 @@ kc describe hpa php-apache -n hpa-vpa   # check Events for ScaleDown
 ## Takeaway
 
 **HPA scale-up ≠ symmetric scale-down.** Production design — avoids flapping when traffic spikes briefly. Not a misconfiguration in your YAML.
+
+## Captured output — CPU at 0%, replicas still 6
+
+```text
+kc get hpa -n hpa-vpa --watch
+
+NAME         REFERENCE               TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   cpu: 85%/50%   1         10        6          47m
+php-apache   Deployment/php-apache   cpu: 91%/50%   1         10        6          48m
+php-apache   Deployment/php-apache   cpu: 52%/50%   1         10        6          48m
+php-apache   Deployment/php-apache   cpu: 49%/50%   1         10        6          48m
+php-apache   Deployment/php-apache   cpu: 32%/50%   1         10        6          48m
+php-apache   Deployment/php-apache   cpu: 5%/50%    1         10        6          49m
+php-apache   Deployment/php-apache   cpu: 0%/50%    1         10        6          49m   ← load stopped
+php-apache   Deployment/php-apache   cpu: 0%/50%    1         10        6          53m   ← still 6 replicas
+```
+
+CPU hit **0%** but **REPLICAS stayed at 6** — waiting for the 5-minute scaleDown stabilization window. Keep watching; replicas should drop toward 1 after ~5 min.
