@@ -1,0 +1,21 @@
+# CertificateSigningRequest — client cert for CN=ht (kube-apiserver-client signer)
+#
+# Cluster-scoped — NO metadata.namespace (ignored if set).
+# spec.request = base64(ht.csr) — regenerate after new openssl CSR:
+#   cat ht.csr | base64 | tr -d '\n'
+#
+# Workflow:
+#   kc apply -f csr.yaml
+#   kc get csr ht
+#   kc certificate approve ht
+#   kc get csr ht -o jsonpath='{.status.certificate}' | base64 -d > ht.crt
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: ht
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1VqQ0NBVG9DQVFBd0RURUxNQWtHQTFVRUF3d0NhSFF3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQgpEd0F3Z2dFS0FvSUJBUUN1d0NjaHB5MXpRQzNKK1A4azBwTkIvNEg3Ky9MRlIzZ21XbXFWTXFKVis4ZmhjWmJvCnhkcmNVckp0bS9zOEErL2RkbXQ0R3Y5V1hhQ1lnYnI1dVFab1dPaGVqbmlWN3Y3YldWOGJVVUdHZ3RZYisxTnkKbk9ORVprd1c1eXRrSzhKV2E3TE9XSHlOaG9sUUFmdy9DODNQa3E4eFRaSUxPa1FMZVB6SmNvOXUrVy9aWERYMwpWK2RCSDZleVNTWWM3Q3dsWnc5aVNPWHJ5ditLUmNxeTBWOURrM3pBQWF3K09HZXYxdnVZd3B5bTdabTZaa25DCm8vL0tMdTZlbUE2dE1KcTFXajdiblRUZkdHTjk2Zmc3RmgrOVovL3JCN1h1MnZBQzFTc1Q1QmcrVHFpZU1wY1UKUTFNeTh5VU1KMFAwSFc5SUhaNmN1OHNBdWxSampRRmhEbFdqQWdNQkFBR2dBREFOQmdrcWhraUc5dzBCQVFzRgpBQU9DQVFFQXExZXdhcm5xOW9GT3luUlM1dkF1RkIvWGZPY0RKTTlpUUxLdzZvbEJoZElkbGlLRTlIcUpCSHVNCllJcEIwdkRMOHhpRFEweEdIY0lLMVNBR01xMlBHNjRETXZGZ2FwQTNYSnRQUldzVGNBdFJTa2oxc21JckR3RnoKZXVxR2VuMDNLSjhBb1VsekhiZDMxR21vWkE2VnVZbi9HZVAzMDFUWjlRNkRpUGRGL3I2Z2xGSGd0UWJOcTQ1cQptQU5hVUdQRll6TWp3MHRaSEtyTGU0Z0xjbzllazZ3SFFLK0xPRnhhSmtkYU5uL1NOWFh4bTJycDR2a2pVa1RaClhETDR4eUxQcEs2ckx5VUc2anpWTSt1M2NIN0xPQ21MVHIvS3NBeGk4aFNnT2gydlRKWXZQZDF5RWp0a1NlbDAKRVJ5MDdpejgwTHFHWVJyd3VxQlphQTUyV2ZQdFFBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUgUkVRVUVTVC0tLS0tCg==
+  signerName: kubernetes.io/kube-apiserver-client
+  expirationSeconds: 86400
+  usages:
+  - client auth

@@ -1,2 +1,7 @@
 # Work-related local notes — not part of CKA study track
 Kubernetes/AEP-local-to-k8s/
+
+# Private keys and locally generated CSRs — never commit
+**/*.key
+**/ht.csr
+**/ht.crt

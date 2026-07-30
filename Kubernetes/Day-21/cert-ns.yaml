@@ -1,0 +1,5 @@
+# Namespace for Day 21 cert lab (optional — CSR object is cluster-scoped).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-management
