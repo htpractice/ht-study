@@ -1,0 +1,5 @@
+# Namespace for Day 19 ConfigMap labs.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: configmaps
