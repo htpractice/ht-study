@@ -91,7 +91,109 @@ Use `configMapKeyRef` when you control env var names; use `envFrom` for bulk imp
 
 ---
 
-## 5. Volume Mount Pattern (exam favorite)
+## 5. Lab — Secrets (env + volume) — *added; instructor skipped*
+
+Same namespace, same injection patterns — **different kind** and **secretKeyRef**.
+
+```mermaid
+flowchart TB
+    subgraph cm [ConfigMap app-config]
+        CM1[first-name]
+        CM2[last-name]
+    end
+    subgraph sec [Secret db-creds]
+        S1[username]
+        S2[password]
+    end
+    subgraph pods [Pods]
+        P1[cm-pod — configMapKeyRef → env]
+        P2[secret-env-pod — secretKeyRef → env]
+        P3[secret-vol-pod — secret volume → files]
+        P4[cm-vol-pod — configMap volume → files]
+    end
+    CM1 --> P1
+    CM2 --> P1
+    CM1 --> P4
+    CM2 --> P4
+    S1 --> P2
+    S2 --> P2
+    S1 --> P3
+    S2 --> P3
+```
+
+| File | Purpose |
+|------|---------|
+| `app-secret.yaml` | Secret `db-creds` — `stringData` (plain in YAML, base64 in API) |
+| `pod-secret-env.yaml` | `DB_USER`, `DB_PASSWORD` via **secretKeyRef** |
+| `pod-secret-volume.yaml` | Mount at `/etc/db-creds/` — **preferred in prod** (not in `ps aux`) |
+| `pod-cm-volume.yaml` | ConfigMap volume mount for comparison |
+
+### Apply order
+
+```bash
+kc apply -f configmaps-ns.yaml
+kc apply -f app-cm.yaml
+kc apply -f app-secret.yaml
+kc apply -f pod-cm.yaml
+kc apply -f pod-secret-env.yaml
+kc apply -f pod-secret-volume.yaml
+kc apply -f pod-cm-volume.yaml
+kc get cm,secret,pod -n configmaps
+```
+
+### Verify Secret — env injection
+
+```bash
+kc exec -it secret-env-pod -n configmaps -- printenv | grep DB_
+# DB_USER=admin
+# DB_PASSWORD=s3cr3t
+
+kc get secret db-creds -n configmaps -o jsonpath='{.data.password}' | base64 -d && echo
+# s3cr3t
+```
+
+### Verify Secret — volume mount (interview favorite)
+
+```bash
+kc exec -it secret-vol-pod -n configmaps -- ls /etc/db-creds
+# username  password
+
+kc exec -it secret-vol-pod -n configmaps -- cat /etc/db-creds/username
+# admin
+```
+
+### ConfigMap vs Secret — side-by-side YAML
+
+| ConfigMap | Secret |
+|-----------|--------|
+| `configMapKeyRef` | `secretKeyRef` |
+| `configMapRef` (envFrom) | `secretRef` (envFrom) |
+| `volumes.configMap` | `volumes.secret` |
+
+```yaml
+# Secret env — only change from ConfigMap lab
+env:
+- name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: db-creds
+      key: password
+```
+
+### Interview: env vs file for secrets
+
+| | Env (`secretKeyRef`) | Volume mount |
+|---|------------------------|--------------|
+| **Ease** | Simple | Slightly more YAML |
+| **Visibility** | Shows in `printenv`, `/proc` | File with `defaultMode: 0400` |
+| **Rotation** | Needs pod restart | Kubelet may sync file (~60s) |
+| **Production** | OK for small apps | **Preferred** for DB passwords, TLS keys |
+
+**CrowdStrike / Vault:** Vault holds truth → External Secrets Operator syncs → K8s Secret → volume mount into pod.
+
+---
+
+## 6. Volume Mount Pattern (exam favorite)
 
 Each ConfigMap **key becomes a filename** under the mount path:
 
@@ -111,9 +213,11 @@ containers:
 
 Optional: `items` to rename keys or pick subset.
 
+See **`pod-cm-volume.yaml`** and **`pod-secret-volume.yaml`** for working labs.
+
 ---
 
-## 6. Imperative Creation (CKA speed)
+## 7. Imperative Creation (CKA speed)
 
 ```bash
 # Literal key=value
@@ -136,7 +240,7 @@ kc get secret db-creds -n configmaps -o jsonpath='{.data.password}' | base64 -d
 
 ---
 
-## 7. Updates — What Propagates When?
+## 8. Updates — What Propagates When?
 
 | Consumption | ConfigMap/Secret updated | Pod sees new value? |
 |-------------|--------------------------|---------------------|
@@ -152,7 +256,7 @@ kc delete pod cm-pod -n configmaps && kc apply -f pod-cm.yaml
 
 ---
 
-## 8. Secrets — Same Shape, Different Kind
+## 9. Secrets — Declarative YAML (`app-secret.yaml`)
 
 ```yaml
 apiVersion: v1
@@ -161,17 +265,17 @@ metadata:
   name: db-creds
   namespace: configmaps
 type: Opaque
-data:
-  password: czNjcrN0    # base64 — echo -n 's3cr3t' | base64
-stringData:             # plain text in manifest; API stores encoded
+stringData:              # plain in manifest — API stores base64 in .data
   username: admin
+  password: s3cr3t
+# Or data: with pre-encoded base64 (exam may give you encoded values)
 ```
 
-**Security note:** base64 ≠ encryption. Use RBAC, encryption at rest, External Secrets / Vault for production.
+**Security note:** base64 ≠ encryption. Use RBAC, encryption at rest, External Secrets / Vault for production. **Never commit real prod secrets to git** — this lab uses fake creds for learning.
 
 ---
 
-## 9. ECS Parallel
+## 10. ECS Parallel
 
 | K8s | ECS |
 |-----|-----|
@@ -182,11 +286,13 @@ stringData:             # plain text in manifest; API stores encoded
 
 ---
 
-## 10. CKA Exam Tips
+## 11. CKA Exam Tips
 
 ```bash
 kc explain pod.spec.containers.env.valueFrom.configMapKeyRef
+kc explain pod.spec.containers.env.valueFrom.secretKeyRef
 kc explain pod.spec.volumes.configMap
+kc explain pod.spec.volumes.secret
 ```
 
 - ConfigMap must exist **before** pod references it (or pod stays pending/error)
@@ -197,15 +303,18 @@ kc explain pod.spec.volumes.configMap
 
 ---
 
-## 11. Interview Q&A
+## 12. Interview Q&A
 
 | Question | Answer |
 |----------|--------|
 | ConfigMap vs Secret? | Same injection; Secrets for sensitive data + base64 in API; neither replaces Vault |
-| Updated CM, env unchanged? | Env frozen at container start — restart required |
-| Updated CM, file unchanged? | Check mount path; wait for kubelet sync or restart |
-| Why not bake config in image? | Same image across envs; GitOps can manage CM/Secret separately |
-| How does CrowdStrike stack handle secrets? | Vault + GitOps rotation; K8s Secret as mount/env delivery layer |
+| secretKeyRef vs configMapKeyRef? | Identical YAML shape — swap kind source |
+| Env vs volume for passwords? | **Volume preferred** — not exposed in process env / `kubectl describe pod` as plainly |
+| Updated CM/Secret, env unchanged? | Env frozen at container start — restart required |
+| Updated Secret, file unchanged? | Wait for kubelet sync (~60s) or restart; check mount path |
+| Why not bake config in image? | Same image across envs; GitOps manages CM/Secret separately |
+| How does CrowdStrike stack handle secrets? | Vault + GitOps rotation; K8s Secret as delivery layer into pods |
+| Is base64 encryption? | **No** — encoding only; anyone with Secret read RBAC can decode |
 
 ---
 
