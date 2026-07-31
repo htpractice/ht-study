@@ -1,0 +1,10 @@
+# ServiceAccount — identity pods (and users via impersonation) use for API auth
+#
+# Verify:
+#   kc apply -f sa-pod-reader.yaml
+#   kc get sa -n rbac-lab
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pod-reader-sa
+  namespace: rbac-lab
