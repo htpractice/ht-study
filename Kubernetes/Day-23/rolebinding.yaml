@@ -1,0 +1,23 @@
+# RoleBinding — grants Role to User ht in namespace rbac
+#
+# Day 21 tie-in: User "ht" = CN from client cert (CSR approve flow)
+# roleRef.kind can be Role OR ClusterRole — binding scope stays in this namespace
+#
+# Verify:
+#   kc auth can-i list pods --as=ht -n rbac        # yes
+#   kc auth can-i list pods --as=ht -n default     # no
+#   kc auth can-i create pods --as=ht -n rbac      # no (watch only)
+#   kc config use-context ht && kc get po -n rbac    # works (empty list OK)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: rbac
+subjects:
+- kind: User
+  name: ht
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
