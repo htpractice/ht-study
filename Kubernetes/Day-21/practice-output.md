@@ -66,3 +66,13 @@ openssl x509 -in ht.crt -text -noout | grep -E 'Subject:|Not After'
 ```bash
 ubectl apply -f csr.yaml   # zsh: command not found — alias is kc/kubectl
 ```
+
+## Cert mismatch trap (re-run Day 21)
+
+Regenerated `ht.key` but kept old `ht.crt` → kubeconfig error:
+
+```text
+Loading client cert failed: tls: private key does not match public key
+```
+
+Fix: update `csr.yaml` with current CSR base64, re-approve, **overwrite ht.crt** from CSR status. Verify key/cert moduli match (Day 23 notes §4).

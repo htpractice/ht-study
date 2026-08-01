@@ -1,0 +1,16 @@
+# ClusterRole — cluster-scoped permissions (nodes are not namespaced)
+#
+# ClusterRole + ClusterRoleBinding → effect across ENTIRE cluster
+# metadata.namespace is IGNORED on cluster-scoped kinds (remove it)
+#
+# Verify:
+#   kc describe clusterrole node-reader
+#   kc auth can-i list nodes --as=ht
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-reader
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]

@@ -1,0 +1,24 @@
+# ClusterRoleBinding — grant ClusterRole to User ht cluster-wide
+#
+# Day 23: RoleBinding + Role → pods in namespace rbac only
+# Day 24: ClusterRoleBinding + ClusterRole → nodes everywhere
+#
+# Cluster-scoped — NO metadata.namespace
+#
+# Verify:
+#   kc describe clusterrolebinding cluster-node-reader
+#   kc auth can-i list nodes --as=ht                    # yes
+#   kc auth can-i delete nodes --as=ht                  # no
+#   kc config use-context ht && kc get nodes            # works
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-node-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-reader
+subjects:
+- kind: User
+  name: ht
+  apiGroup: rbac.authorization.k8s.io

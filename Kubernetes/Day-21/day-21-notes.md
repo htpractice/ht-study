@@ -180,6 +180,23 @@ kc explain certificatesigningrequest.spec
 
 Client cert expired → generate new key/CSR → new CSR object → approve → update kubeconfig.
 
+### Cert mismatch trap (Day 23/24 re-run)
+
+Regenerated `ht.key` but kept old `ht.crt`:
+
+```text
+tls: private key does not match public key
+```
+
+Always overwrite `ht.crt` from approved CSR; verify pair:
+
+```bash
+openssl x509 -noout -modulus -in ht.crt | openssl md5
+openssl rsa -noout -modulus -in ht.key | openssl md5
+```
+
+Full re-issue steps in **Day 23 notes §4**.
+
 ---
 
 ## 9. CKA Exam Tips

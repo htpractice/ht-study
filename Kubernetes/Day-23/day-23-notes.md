@@ -71,17 +71,32 @@ Lab CSR used `expirationSeconds: 86400` (24h). Cert expired → **re-run Day 21*
 
 ```bash
 cd Kubernetes/Day-21
+
+# 1. Generate (or keep existing matching key+csr)
 openssl genrsa -out ht.key 2048
 openssl req -new -key ht.key -out ht.csr -subj "/CN=ht"
-# update csr.yaml spec.request: cat ht.csr | base64 | tr -d '\n'
+
+# 2. Update csr.yaml — MUST match current ht.csr
+cat ht.csr | base64 | tr -d '\n'    # paste into spec.request
+
+# 3. Re-issue (admin context)
+kc config use-context kind-cka-cluster01
 kc delete csr ht --ignore-not-found
 kc apply -f csr.yaml
 kc certificate approve ht
+
+# 4. CRITICAL — overwrite ht.crt from approved CSR
 kc get csr ht -o jsonpath='{.status.certificate}' | base64 -d > ht.crt
 
+# 5. Verify pair matches (same MD5 = good)
+openssl x509 -noout -modulus -in ht.crt | openssl md5
+openssl rsa -noout -modulus -in ht.key | openssl md5
+
+# 6. Refresh kubeconfig
 kc config set-credentials ht \
-  --client-certificate=ht.crt --client-key=ht.key
-kc config set-context ht --cluster=kind-cka-cluster01 --user=ht
+  --client-certificate=$(pwd)/ht.crt \
+  --client-key=$(pwd)/ht.key
+kc config use-context ht
 ```
 
 **RBAC subject name must match cert CN:** `RoleBinding` subject `name: ht` ↔ CSR `-subj "/CN=ht"`.
