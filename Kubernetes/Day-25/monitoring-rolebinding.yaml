@@ -1,0 +1,24 @@
+# RoleBinding — ServiceAccount monitoring-bot → Role monitoring-pod-reader
+#
+# FIX vs draft YAML: subject must be ServiceAccount, NOT User
+#   User monitoring-bot        → wrong (CN=user cert identity)
+#   ServiceAccount monitoring-bot → correct (in-cluster SA identity)
+#
+# Verify:
+#   kc describe rolebinding monitoring-pod-reader -n deamon-monitoring
+#   kc auth can-i list pods \
+#     --as=system:serviceaccount:deamon-monitoring:monitoring-bot \
+#     -n deamon-monitoring
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: monitoring-pod-reader
+  namespace: deamon-monitoring
+subjects:
+- kind: ServiceAccount
+  name: monitoring-bot
+  namespace: deamon-monitoring
+roleRef:
+  kind: Role
+  name: monitoring-pod-reader
+  apiGroup: rbac.authorization.k8s.io
