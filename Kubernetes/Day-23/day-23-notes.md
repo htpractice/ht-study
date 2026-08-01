@@ -1,156 +1,114 @@
-# Day 23 — RBAC Hands-on: User Certs + Role + RoleBinding
+# Day 23 — RBAC Hands-on: User Cert + Role + RoleBinding
 
-**Day 22** = concepts. **Day 23** = end-to-end: create user `ht` (Day 21 CSR), bind permissions, **switch context**, feel Forbidden vs allowed.
+**Day 22** = auth/authz concepts. **Day 23** = practical loop: user `ht` (Day 21 CSR) → **Role** → **RoleBinding** → switch context → see **Forbidden** vs allowed.
 
-The hard part is **four objects** — this day focuses on **Role + RoleBinding + User**. ClusterRole/ClusterRoleBinding explained for CKA completeness.
+**Day 24** covers ClusterRole and ClusterRoleBinding — not in this day's scope.
 
 ---
 
-## 1. The Four Objects — One Table (memorize this)
+## 1. Mental Model (Day 23 only)
 
 ```text
-WHAT (rules)              WHO + WHERE (binding)
-────────────────          ─────────────────────
-Role          ──┐
-                ├── RoleBinding        →  ONE namespace only
-ClusterRole   ──┘
-
-ClusterRole   ─── ClusterRoleBinding   →  ENTIRE cluster
+Day 21                    Day 23
+────────                  ──────
+ht.key + ht.crt    →      User "ht" in kubeconfig (CN=ht)
+                          Role pod-reader (rules in namespace rbac)
+                          RoleBinding read-pods (User ht → Role)
+                          use-context ht → API checks RBAC
 ```
-
-| Object | Defines rules? | Scope of binding |
-|--------|----------------|------------------|
-| **Role** | Yes | N/A (needs RoleBinding) |
-| **ClusterRole** | Yes | N/A (needs Binding) |
-| **RoleBinding** | No — links subject → role | **Single namespace** |
-| **ClusterRoleBinding** | No — links subject → role | **All namespaces + cluster resources** |
-
-### The trap that confused everyone
-
-**RoleBinding can reference a ClusterRole** — but permissions still apply **only in the RoleBinding's namespace**.
-
-```yaml
-# ClusterRole defined once cluster-wide
-kind: ClusterRole
-metadata:
-  name: pod-reader-global
-
-# Reuse in namespace rbac — ht can read pods IN rbac ONLY
-kind: RoleBinding
-metadata:
-  namespace: rbac
-roleRef:
-  kind: ClusterRole          # ← ClusterRole name
-  name: pod-reader-global
-subjects:
-- kind: User
-  name: ht
-```
-
-Same ClusterRole + **ClusterRoleBinding** → ht reads pods **everywhere**.
 
 ```mermaid
-flowchart TB
-    subgraph rules [WHAT — permission definition]
-        R[Role pod-reader<br/>namespace rbac]
-        CR[ClusterRole pod-reader-global<br/>cluster-wide definition]
-    end
-
-    subgraph bind_ns [WHO — RoleBinding in rbac]
-        RB[RoleBinding read-pods]
-        U[User ht]
-    end
-
-    subgraph bind_cluster [WHO — ClusterRoleBinding]
-        CRB[ClusterRoleBinding]
-    end
-
-    R --> RB
-    CR --> RB
-    CR --> CRB
-    RB --> U
-    CRB --> U
-
-    RB -.->|effect| NS1[namespace rbac ONLY]
-    CRB -.->|effect| ALL[ALL namespaces]
+flowchart LR
+    U[User ht<br/>client cert CN=ht]
+    RB[RoleBinding read-pods<br/>namespace rbac]
+    R[Role pod-reader<br/>get/list/watch pods]
+    U --> RB --> R
 ```
 
-**Interview one-liner:** Role vs ClusterRole = where rules are **defined**; RoleBinding vs ClusterRoleBinding = where rules **apply**.
+| Object | What it does |
+|--------|--------------|
+| **Role** | Defines **what** is allowed — verbs on resources **in one namespace** |
+| **RoleBinding** | Links **who** (User/Group/SA) to a Role **in that namespace** |
+
+**Interview one-liner:** Role = policy; RoleBinding = attach policy to a user in a namespace.
 
 ---
 
-## 2. ECS / IAM Parallel
+## 2. Authentication vs Authorization (this lab)
 
-| K8s | IAM equivalent |
-|-----|----------------|
-| Role (namespace) | Policy scoped to one account partition / resource path |
-| ClusterRole | Policy usable cluster-wide |
-| RoleBinding | Attach policy to user **in one account/OU** |
-| ClusterRoleBinding | Attach policy org-wide |
+| Step | Day 23 example |
+|------|----------------|
+| **Authentication** | `ht.crt` + `ht.key` — API knows `User "ht"` |
+| **Authorization** | RoleBinding in `rbac` — can list pods **there only** |
+
+**Authenticated but Forbidden** = valid cert, no permission for that verb/namespace.
+
+Your session:
+
+```bash
+kc get po              # Forbidden — binding is not in default
+kc get po -n rbac      # Allowed — empty list still success
+kc run pod-ht ...      # Forbidden — no create verb
+```
+
+---
+
+## 3. ECS / IAM Parallel
+
+| K8s (Day 23) | ECS / IAM |
+|--------------|-----------|
 | User `ht` (cert CN) | IAM user |
-| `Forbidden` from API | `AccessDenied` |
+| Role `pod-reader` | IAM policy (actions on resources) |
+| RoleBinding `read-pods` | Attach policy to user |
+| `Forbidden` | `AccessDenied` |
+| `-n rbac` scope | Policy scoped to one environment/namespace |
 
 ---
 
-## 3. End-to-End Lab Flow
+## 4. Day 21 Revision — Cert Expired
 
-```text
-Day 21 (re-run if cert expired)
-  openssl genrsa → ht.key
-  openssl req → ht.csr → CSR approve → ht.crt
-  kubeconfig: user ht + context ht
-
-Day 23
-  Role pod-reader (get/list/watch pods in rbac)
-  RoleBinding read-pods (User ht → Role)
-  kubectl use-context ht → test
-```
-
-### Step 0 — Day 21 revision (cert expired)
-
-Lab cert had `expirationSeconds: 86400` (24h). When expired, **re-run Day 21** (instructor covers formal renewal later):
+Lab CSR used `expirationSeconds: 86400` (24h). Cert expired → **re-run Day 21** (formal renewal in later videos):
 
 ```bash
 cd Kubernetes/Day-21
 openssl genrsa -out ht.key 2048
 openssl req -new -key ht.key -out ht.csr -subj "/CN=ht"
-# update csr.yaml spec.request with: cat ht.csr | base64 | tr -d '\n'
+# update csr.yaml spec.request: cat ht.csr | base64 | tr -d '\n'
 kc delete csr ht --ignore-not-found
 kc apply -f csr.yaml
 kc certificate approve ht
 kc get csr ht -o jsonpath='{.status.certificate}' | base64 -d > ht.crt
 
-# Wire kubeconfig (if not already)
 kc config set-credentials ht \
   --client-certificate=ht.crt --client-key=ht.key
 kc config set-context ht --cluster=kind-cka-cluster01 --user=ht
 ```
 
-**User identity for RBAC:** certificate **Common Name (CN=ht)** → API sees `User "ht"`.
-
-**Renewal (preview — later videos):** new CSR before expiry, or cert-manager / short-lived certs in production.
+**RBAC subject name must match cert CN:** `RoleBinding` subject `name: ht` ↔ CSR `-subj "/CN=ht"`.
 
 ---
 
-## 4. Hands-on — Day 23 Manifests
+## 5. Hands-on Manifests
 
 | File | Purpose |
 |------|---------|
 | `rbac-ns.yaml` | Namespace `rbac` |
-| `read-role.yaml` | Role `pod-reader` — get/list/watch pods |
+| `read-role.yaml` | Role `pod-reader` — get, list, watch pods |
 | `rolebinding.yaml` | User `ht` → Role in namespace `rbac` |
 
-### Apply (as admin context)
+### Apply (admin context only)
 
 ```bash
-kc config use-context kind-cka-cluster01   # admin
+kc config use-context kind-cka-cluster01
 cd Kubernetes/Day-23
 kc apply -f rbac-ns.yaml
 kc apply -f read-role.yaml
 kc apply -f rolebinding.yaml
 ```
 
-### Imperative equivalents (CKA speed)
+**Trap:** User `ht` cannot `kubectl apply` — switch to admin first.
+
+### Imperative (CKA speed)
 
 ```bash
 kc create role pod-reader --verb=get,list,watch --resource=pods \
@@ -162,47 +120,50 @@ kc create rolebinding read-pods --role=pod-reader --user=ht \
 
 ---
 
-## 5. Verify — The Payoff
+## 6. Verify
 
-### As admin (before switching)
+### auth can-i (stay on admin context)
 
 ```bash
 kc auth can-i list pods --as=ht -n rbac      # yes
 kc auth can-i list pods --as=ht -n default   # no
-kc auth can-i create pods --as=ht -n rbac      # no
+kc auth can-i create pods --as=ht -n rbac    # no
 ```
 
-### Switch to user ht
+### Switch context — feel RBAC
 
 ```bash
 kc config use-context ht
-kc get po -n rbac          # OK — empty list is success
-kc get po                  # Forbidden in default
-kc run pod-ht --image=nginx # Forbidden — no create verb
-```
-
-### Switch back to admin
-
-```bash
-kc config use-context kind-cka-cluster01
+kc get po -n rbac
+kc get po                    # Forbidden
+kc config use-context kind-cka-cluster01   # back to admin
 ```
 
 ---
 
-## 6. Your Session — What Happened
+## 7. Role + RoleBinding YAML
 
-| Command | Result | Why |
-|---------|--------|-----|
-| `use-context ht` | Switched | Now API sees User ht |
-| `get po` (default) | **Forbidden** | RoleBinding is in `rbac`, not default |
-| `get po -n rbac` | Empty list | **Allowed** — get/list/watch works |
-| `run pod-ht` (default) | **Forbidden** | No create verb + wrong namespace |
+```yaml
+# Role — namespace rbac
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
 
-**Authenticated but not authorized** = valid cert, no RoleBinding for that action/namespace.
+# RoleBinding — who gets the role
+subjects:
+- kind: User
+  name: ht
+roleRef:
+  kind: Role
+  name: pod-reader
+```
+
+RoleBinding **does not contain** rules — it references a Role by name. Both objects live in the **same namespace** (`rbac`).
 
 ---
 
-## 7. kubectl config traps (from your output)
+## 8. kubectl config traps (from your lab)
 
 | Wrong | Right |
 |-------|-------|
@@ -212,43 +173,25 @@ kc config use-context kind-cka-cluster01
 
 ---
 
-## 8. Built-in ClusterRoles (awareness)
+## 9. CKA Exam Tips (Day 23 scope)
 
-| ClusterRole | Rough meaning |
-|-------------|---------------|
-| `view` | Read most namespaced objects |
-| `edit` | view + write (no RBAC/roles) |
-| `admin` | edit + RoleBindings in ns |
-| `cluster-admin` | Everything |
-
-```bash
-kc get clusterrole view -o yaml | head -30
-```
+- Role + RoleBinding are **namespace-scoped** — `-n` matters on both
+- Subject `User` name = client cert **CN**
+- Test with `kubectl auth can-i --as=ht -n rbac`
+- `roleRef` is **immutable** — delete and recreate binding to change role
+- RoleBinding references a **Role** in the same namespace (ClusterRole → Day 24)
 
 ---
 
-## 9. CKA Exam Tips
-
-- **4 objects**, 2 scopes — draw the table before answering
-- RoleBinding → Role **or** ClusterRole (namespace-limited either way)
-- ClusterRoleBinding → ClusterRole only (cluster-wide)
-- Subject types: `User`, `Group`, `ServiceAccount`
-- User name = cert CN for client cert auth
-- `kubectl auth can-i --as=<user> -n <ns>`
-- `roleRef` is **immutable** — delete binding to change role
-
----
-
-## 10. Interview Q&A
+## 10. Interview Q&A (Day 23 scope)
 
 | Question | Answer |
 |----------|--------|
-| Role vs ClusterRole? | Both define rules; ClusterRole is cluster-scoped definition (nodes, PVs, all ns) |
-| RoleBinding + ClusterRole? | Reuses cluster role definition; effect **still one namespace** |
-| RoleBinding vs ClusterRoleBinding? | Namespace vs cluster-wide effect |
-| Authenticated but Forbidden? | Cert valid; missing/wrong RBAC binding |
-| How is User ht identified? | Client cert CN matches RoleBinding subject name |
-| Cert expired? | Re-issue CSR or automate rotation — RBAC unchanged |
+| Role vs RoleBinding? | Role = permissions; RoleBinding = who gets them |
+| Authenticated but Forbidden? | Valid cert; missing binding or wrong namespace/verb |
+| How is User ht identified? | Client cert CN matches RoleBinding subject |
+| Why Forbidden in default ns? | RoleBinding exists only in `rbac` namespace |
+| Cert expired? | Re-issue via Day 21 CSR flow; RBAC objects unchanged |
 
 ---
 

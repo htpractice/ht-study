@@ -1,7 +1,6 @@
 # RoleBinding — grants Role to User ht in namespace rbac
 #
 # Day 21 tie-in: User "ht" = CN from client cert (CSR approve flow)
-# roleRef.kind can be Role OR ClusterRole — binding scope stays in this namespace
 #
 # Verify:
 #   kc auth can-i list pods --as=ht -n rbac        # yes
