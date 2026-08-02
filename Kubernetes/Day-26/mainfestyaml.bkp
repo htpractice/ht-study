@@ -1,0 +1,127 @@
+# Using this we will deploy front end , backend and database pods and services.
+
+# namespace: frontend-app
+# namespace: backend-app
+# namespace: database-app
+# Front end deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: frontend-app
+  name: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-app
+  template:
+    metadata:
+      labels:
+        app: frontend-app
+        tier: frontend
+        track: dev
+    spec:
+      containers:
+      - name: frontend-app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+# Front end service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: frontend-app
+  name: frontend
+spec:
+  selector:
+    app: frontend-app
+  ports:
+  - port: 80
+    targetPort: 80
+---
+# Backend deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: backend-app
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: backend
+        track: dev
+    spec:
+      containers:
+      - name: backend
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+# Backend service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: backend-app
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 80
+    targetPort: 80
+---
+# Database deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: database-app
+  name: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+        tier: database
+        track: dev
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:latest
+        env:
+        - name: MYSQL_USER
+          value: mysql
+        - name: MYSQL_PASSWORD
+          value: mysql
+        - name: MYSQL_DATABASE
+          value: testdb
+        - name: MYSQL_ROOT_PASSWORD
+          value: verysecure
+        ports:
+        - name: mysql
+          containerPort: 3306
+          protocol: TCP
+---
+# Database service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: database-app
+  name: database
+spec:
+  selector:
+    app: database
+  ports:
+  - port: 3306
+    targetPort: 3306

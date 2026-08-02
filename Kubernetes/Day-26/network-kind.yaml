@@ -1,0 +1,37 @@
+# Kind multi-node cluster config (1 control-plane + 2 workers)
+#
+# NodePort + Kind: why extraPortMappings are needed
+# -------------------------------------------------
+# Day-09/nodeport-svc.yml defines a NodePort Service with:
+#   - port: 80          -> Service port inside the cluster
+#   - targetPort: 80    -> Pod container port
+#   - nodePort: 31595   -> Static port on every node (valid range: 30000-32767)
+#
+# On a real cluster you reach the app at <NodeIP>:31595. In Kind, each node is a
+# Docker container, so NodePort is not published to the host automatically.
+#
+# extraPortMappings on the control-plane node bridges that gap by forwarding:
+#   host localhost:31595 -> control-plane container:31595
+#
+# The containerPort must match nodePort in nodeport-svc.yml (31595), not port (80).
+#
+# Workflow:
+#   1. kind create cluster --config multi-node.yaml --name kind-multi-node
+#   2. kubectl config use-context kind-kind-multi-node
+#   3. kubectl apply -f Day-09/nodeport-svc.yml   # (+ deployment with label env: demo)
+#   4. curl http://127.0.0.1:31595                # access NodePort via Kind port mapping
+#
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  # Forward host port 31595 to the control-plane node (matches nodeport-svc.yml nodePort)
+  extraPortMappings:
+  - containerPort: 31595
+    hostPort: 31595
+    listenAddress: "127.0.0.1"
+    protocol: TCP
+- role: worker
+- role: worker
+networking:
+  disableDefaultCNI: true

@@ -7,3 +7,4 @@ Kubernetes/AEP-local-to-k8s/
 **/ht.crt
 **/csr/*.crt
 **/monitoring-bot.crt
+**/kubectl-calico

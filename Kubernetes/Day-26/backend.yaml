@@ -1,0 +1,37 @@
+# Backend deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: backend-app
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: backend
+        track: dev
+    spec:
+      containers:
+      - name: backend
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+# Backend service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: backend-app
+  name: backend-svc
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 80
+    targetPort: 80
+---
