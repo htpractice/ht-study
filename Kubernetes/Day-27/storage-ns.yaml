@@ -1,0 +1,5 @@
+#creating namespace for storage
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storage-ns
