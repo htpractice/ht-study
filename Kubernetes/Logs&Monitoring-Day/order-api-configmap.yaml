@@ -1,0 +1,126 @@
+# LEGACY — ConfigMap-mounted stdlib app (no Docker build required)
+# Current lab uses Docker image hthaware2508/order-api-lab:v1 — see order-api-deployment.yaml
+# Keep for reference only; not applied in standard workflow
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-api-code
+  namespace: order-api
+data:
+  app.py: |
+    """Order API — stdlib only: JSON logs + Prometheus /metrics (no pip required)."""
+    import json
+    import logging
+    import random
+    import time
+    import uuid
+    from datetime import datetime, timezone
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import urlparse
+
+    PORT = 8080
+    metrics = {"http_requests_total": {}, "orders_created_total": 0}
+
+    class JsonFormatter(logging.Formatter):
+        def format(self, record: logging.LogRecord) -> str:
+            payload = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+            for key in ("trace_id", "order_id", "method", "path", "status", "latency_ms", "product"):
+                if hasattr(record, key):
+                    payload[key] = getattr(record, key)
+            return json.dumps(payload)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(JsonFormatter())
+    log = logging.getLogger("order-api")
+    log.handlers.clear()
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+
+    def inc_request(method, endpoint, status):
+        key = (method, endpoint, str(status))
+        metrics["http_requests_total"][key] = metrics["http_requests_total"].get(key, 0) + 1
+
+    def render_metrics():
+        lines = ["# HELP http_requests_total Total HTTP requests", "# TYPE http_requests_total counter"]
+        for (method, endpoint, status), count in metrics["http_requests_total"].items():
+            lines.append(f'http_requests_total{{method="{method}",endpoint="{endpoint}",status="{status}"}} {count}')
+        lines.extend([
+            "# HELP orders_created_total Orders successfully created",
+            "# TYPE orders_created_total counter",
+            f"orders_created_total {metrics['orders_created_total']}",
+        ])
+        return "\n".join(lines) + "\n"
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, fmt, *args):
+            return
+
+        def _trace_id(self):
+            return self.headers.get("X-Trace-Id", str(uuid.uuid4())[:8])
+
+        def _send_json(self, status, body, endpoint):
+            start = time.perf_counter()
+            payload = json.dumps(body).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+            inc_request(self.command, endpoint, status)
+            level = logging.WARNING if status >= 400 else logging.INFO
+            log.log(level, "request_completed", extra={
+                "trace_id": self._trace_id(), "method": self.command,
+                "path": urlparse(self.path).path, "status": status, "latency_ms": elapsed_ms,
+            })
+
+        def do_GET(self):
+            path = urlparse(self.path).path
+            if path == "/health":
+                self._send_json(200, {"status": "ok"}, "health")
+            elif path == "/":
+                self._send_json(200, {"service": "order-api", "version": "v1"}, "root")
+            elif path == "/metrics":
+                body = render_metrics().encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                inc_request("GET", "metrics", 200)
+            else:
+                self._send_json(404, {"error": "not found"}, "unknown")
+
+        def do_POST(self):
+            path = urlparse(self.path).path
+            if path != "/order":
+                self._send_json(404, {"error": "not found"}, "unknown")
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                data = json.loads(raw.decode() or "{}")
+            except json.JSONDecodeError:
+                self._send_json(400, {"error": "invalid json"}, "create_order")
+                return
+            tid = self._trace_id()
+            order_id = f"ord-{uuid.uuid4().hex[:10]}"
+            product = data.get("product", "widget")
+            log.info("order_received", extra={"trace_id": tid, "order_id": order_id})
+            if random.random() < 0.15:
+                log.error("payment_gateway_timeout", extra={"trace_id": tid, "order_id": order_id})
+                self._send_json(503, {"error": "payment timeout", "order_id": order_id}, "create_order")
+                return
+            time.sleep(random.uniform(0.05, 0.3))
+            metrics["orders_created_total"] += 1
+            log.info("order_created", extra={"trace_id": tid, "order_id": order_id, "product": product})
+            self._send_json(201, {"order_id": order_id, "product": product, "status": "confirmed"}, "create_order")
+
+    if __name__ == "__main__":
+        HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

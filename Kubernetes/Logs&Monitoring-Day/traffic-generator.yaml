@@ -1,0 +1,36 @@
+# Traffic generator Job — POST /order every 2s for 5 minutes
+#
+# ~15% of orders return 503 (payment_gateway_timeout) by design — use for:
+#   - Prometheus: rate(http_requests_total{status="503"}[1m])
+#   - Loki: {namespace="order-api"} |= "payment_gateway_timeout"
+#
+# Apply: kubectl apply -f traffic-generator.yaml
+# Logs:  kubectl logs -n order-api job/traffic-generator -f
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traffic-generator
+  namespace: order-api
+spec:
+  ttlSecondsAfterFinished: 300  # auto-cleanup finished Job after 5 min
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: curl
+          image: curlimages/curl:8.5.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Generating traffic to order-api for 5 minutes..."
+              end=$((SECONDS + 300))
+              while [ $SECONDS -lt $end ]; do
+                curl -s -o /dev/null -w "%{http_code}\n" \
+                  -X POST http://order-api.order-api.svc.cluster.local/order \
+                  -H "Content-Type: application/json" \
+                  -d '{"product":"laptop"}'
+                curl -s -o /dev/null http://order-api.order-api.svc.cluster.local/health
+                sleep 2
+              done
+              echo "done"

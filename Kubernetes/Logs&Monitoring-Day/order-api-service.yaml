@@ -1,0 +1,22 @@
+# ClusterIP Service — internal only; traffic-generator and Prometheus reach pods via this
+#
+# port 80       → what clients call (http://order-api.order-api.svc/order)
+# targetPort 8080 → where the container actually listens
+#
+# Verify backends: kubectl get endpoints order-api -n order-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: order-api
+  labels:
+    app: order-api
+spec:
+  type: ClusterIP
+  selector:
+    app: order-api   # must match Deployment pod labels
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

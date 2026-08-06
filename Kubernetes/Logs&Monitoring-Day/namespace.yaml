@@ -1,0 +1,14 @@
+# Namespaces — isolate app workloads from observability stack
+#
+# order-api       → application under test
+# observability   → Loki, Promtail, Grafana, Prometheus (Helm installs here)
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: order-api
