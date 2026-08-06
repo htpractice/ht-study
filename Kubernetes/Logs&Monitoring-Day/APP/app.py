@@ -1,4 +1,4 @@
-"""Order API — structured JSON logs + Prometheus metrics for K8s observability lab."""
+"""Order API v2 — OTEL traces + metrics, JSON logs correlated with trace_id, Prometheus /metrics."""
 import json
 import logging
 import os
@@ -8,15 +8,63 @@ import uuid
 from datetime import datetime, timezone
 
 from flask import Flask, request
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from prometheus_client import Counter, Histogram, generate_latest
 
-app = Flask(__name__)
+SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "order-api")
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", "v2")
+DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "lab")
+OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
 
-REQUESTS = Counter(
-    "http_requests_total",
-    "Total HTTP requests",
-    ["method", "endpoint", "status"],
+resource = Resource.create(
+    {
+        "service.name": SERVICE_NAME,
+        "service.version": SERVICE_VERSION,
+        "deployment.environment": DEPLOYMENT_ENV,
+        "service.namespace": "order-api",
+    }
 )
+
+# --- Traces → OTLP → Collector → Jaeger ---
+trace_provider = TracerProvider(resource=resource)
+trace_provider.add_span_processor(
+    BatchSpanProcessor(OTLPSpanExporter(endpoint=OTLP_ENDPOINT, insecure=True))
+)
+trace.set_tracer_provider(trace_provider)
+tracer = trace.get_tracer(SERVICE_NAME, SERVICE_VERSION)
+
+# --- OTEL metrics → OTLP → Collector → Prometheus exporter ---
+metric_reader = PeriodicExportingMetricReader(
+    OTLPMetricExporter(endpoint=OTLP_ENDPOINT, insecure=True),
+    export_interval_millis=15000,
+)
+metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[metric_reader]))
+meter = metrics.get_meter(SERVICE_NAME, SERVICE_VERSION)
+otel_orders_created = meter.create_counter(
+    "orders.created",
+    description="Orders successfully created",
+    unit="1",
+)
+otel_payment_errors = meter.create_counter(
+    "payment.errors",
+    description="Payment gateway failures",
+    unit="1",
+)
+
+app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
+
+# Prometheus scrape metrics (Part A — compare side-by-side with OTEL path)
+REQUESTS = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
 LATENCY = Histogram(
     "http_request_duration_seconds",
     "HTTP request latency",
@@ -34,7 +82,12 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
-        for key in ("trace_id", "order_id", "method", "path", "status", "latency_ms", "product"):
+        span = trace.get_current_span()
+        ctx = span.get_span_context()
+        if ctx.is_valid:
+            payload["trace_id"] = format(ctx.trace_id, "032x")
+            payload["span_id"] = format(ctx.span_id, "016x")
+        for key in ("order_id", "method", "path", "status", "latency_ms", "product"):
             if hasattr(record, key):
                 payload[key] = getattr(record, key)
         return json.dumps(payload)
@@ -47,14 +100,11 @@ def configure_logging() -> None:
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(os.getenv("LOG_LEVEL", "INFO"))
+    LoggingInstrumentor().instrument(set_logging_format=False)
 
 
 configure_logging()
 log = logging.getLogger("order-api")
-
-
-def trace_id() -> str:
-    return request.headers.get("X-Trace-Id", str(uuid.uuid4())[:8])
 
 
 @app.before_request
@@ -68,9 +118,7 @@ def observe(response):
     endpoint = request.endpoint or "unknown"
     LATENCY.labels(request.method, endpoint).observe(elapsed)
     REQUESTS.labels(request.method, endpoint, response.status_code).inc()
-
     extra = {
-        "trace_id": trace_id(),
         "method": request.method,
         "path": request.path,
         "status": response.status_code,
@@ -88,31 +136,43 @@ def health():
 
 @app.get("/")
 def root():
-    return {"service": "order-api", "version": "v1"}, 200
+    return {"service": SERVICE_NAME, "version": SERVICE_VERSION}, 200
 
 
 @app.post("/order")
 def create_order():
-    tid = trace_id()
     order_id = f"ord-{uuid.uuid4().hex[:10]}"
     product = (request.json or {}).get("product", "widget")
 
-    log.info("order_received", extra={"trace_id": tid, "order_id": order_id})
+    with tracer.start_as_current_span("create_order") as span:
+        span.set_attribute("order.id", order_id)
+        span.set_attribute("product.name", product)
+        span.set_attribute("payment.gateway", "mock-payments")
+        span.set_attribute("service.name", SERVICE_NAME)
 
-    if random.random() < 0.15:
-        log.error(
-            "payment_gateway_timeout",
-            extra={"trace_id": tid, "order_id": order_id},
-        )
-        return {"error": "payment timeout", "order_id": order_id}, 503
+        log.info("order_received", extra={"order_id": order_id})
 
-    time.sleep(random.uniform(0.05, 0.3))
-    ORDERS_CREATED.inc()
-    log.info(
-        "order_created",
-        extra={"trace_id": tid, "order_id": order_id, "product": product},
-    )
-    return {"order_id": order_id, "product": product, "status": "confirmed"}, 201
+        with tracer.start_as_current_span("payment.charge") as pay_span:
+            pay_span.set_attribute("payment.gateway", "mock-payments")
+            pay_span.set_attribute("order.id", order_id)
+            time.sleep(random.uniform(0.02, 0.08))
+
+            if random.random() < 0.15:
+                pay_span.set_attribute("payment.result", "timeout")
+                pay_span.set_attribute("http.response.status_code", 503)
+                span.set_attribute("http.response.status_code", 503)
+                otel_payment_errors.add(1, {"payment.gateway": "mock-payments"})
+                log.error("payment_gateway_timeout", extra={"order_id": order_id})
+                return {"error": "payment timeout", "order_id": order_id}, 503
+
+            pay_span.set_attribute("payment.result", "success")
+
+        time.sleep(random.uniform(0.05, 0.2))
+        ORDERS_CREATED.inc()
+        otel_orders_created.add(1, {"product.name": product})
+        span.set_attribute("http.response.status_code", 201)
+        log.info("order_created", extra={"order_id": order_id, "product": product})
+        return {"order_id": order_id, "product": product, "status": "confirmed"}, 201
 
 
 @app.get("/metrics")

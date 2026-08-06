@@ -1,13 +1,7 @@
-# order-api Deployment — instrumented Flask app for logs + metrics lab
+# order-api v2 — OTEL traces + metrics via Collector; logs carry trace_id for Loki ↔ Jaeger correlation
 #
-# Key observability pieces:
-#   - Pod annotations: tell Prometheus to scrape /metrics on port 8080
-#   - stdout: structured JSON logs (picked up by Promtail → Loki)
-#   - Probes: /health keeps unhealthy pods out of Service endpoints
-#
-# Build image first: see lab-guide.md Phase 1
-#   docker build -t hthaware2508/order-api-lab:v1 APP/
-#   docker push hthaware2508/order-api-lab:v1
+# Build & push v2 before apply:
+#   cd APP && docker build -t hthaware2508/order-api-lab:v2 . && docker push hthaware2508/order-api-lab:v2
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -17,7 +11,7 @@ metadata:
   labels:
     app: order-api
 spec:
-  replicas: 2  # spread across nodes — watch per-pod metrics in Grafana
+  replicas: 2
   selector:
     matchLabels:
       app: order-api
@@ -26,34 +20,46 @@ spec:
       labels:
         app: order-api
       annotations:
-        # Prometheus discovers pods with these annotations (see prometheus-values.yaml)
         prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"      # container port, not Service port
+        prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: order-api
-          image: hthaware2508/order-api-lab:v1
-          imagePullPolicy: Always       # pick up new pushes to Docker Hub
+          image: hthaware2508/order-api-lab:v2
+          imagePullPolicy: Always
           ports:
             - name: http
-              containerPort: 8080       # Flask listens here
+              containerPort: 8080
           env:
             - name: LOG_LEVEL
               value: INFO
             - name: PORT
               value: "8080"
+            - name: SERVICE_VERSION
+              value: v2
+            - name: DEPLOYMENT_ENV
+              value: lab
+            # OTEL resource + exporter (gRPC to Collector)
+            - name: OTEL_SERVICE_NAME
+              value: order-api
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.version=v2,deployment.environment=lab
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 5
+            initialDelaySeconds: 8
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
           resources:
             requests:

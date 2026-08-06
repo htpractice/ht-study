@@ -2,7 +2,7 @@
 
 Course intro + advanced lab: **Metrics Server**, **logging**, **Prometheus/Loki/Grafana**, and incident triage.
 
-**Lab files:** [lab-guide.md](lab-guide.md) · [load-test.md](load-test.md) · [output.md](output.md)
+**Lab files:** [lab-guide.md](lab-guide.md) (Part A) · [part-b-guide.md](part-b-guide.md) (OTEL/Jaeger/alerts) · [load-test.md](load-test.md) · [output.md](output.md)
 
 ---
 
@@ -68,19 +68,20 @@ kubectl logs -n <ns> -l app=order-api            # all replicas
 
 ---
 
-## 4. Advanced lab stack (what we built)
+## 4. Advanced lab stack (Part A + B)
 
 ```
-order-api (Flask + prometheus-client)
-  ├── stdout (JSON) → Promtail → Loki → Grafana (LogQL)
+order-api v2 (Flask + prometheus-client + OTEL SDK)
+  ├── stdout (JSON, trace_id) → Promtail → Loki → Grafana (LogQL)
   ├── /metrics + pod annotations → Prometheus → Grafana (PromQL)
+  ├── OTLP gRPC → otel-collector → Jaeger (traces)
   └── cAdvisor + kube-state-metrics → Dashboard 6417
 ```
 
 | Namespace | Contents |
 |-------------|----------|
 | `order-api` | Deployment, Service, traffic-generator Job |
-| `observability` | Loki, Promtail, Grafana, Prometheus (Helm) |
+| `observability` | Loki, Promtail, Grafana, Prometheus, Jaeger, otel-collector (Helm + manifests) |
 
 ### Prometheus scrape annotations (Deployment)
 
@@ -144,12 +145,15 @@ Community dashboard for pod/cluster metrics. Requires:
 ## 7. Incident triage flow (interview)
 
 ```
-Alert (e.g. 503 rate)
+Alert (e.g. 503 rate — Grafana unified alerting)
   → 1. Dashboard — confirm spike in reported timeframe
   → 2. kubectl — pods ready? restarts? endpoints populated?
-  → 3. Loki — error logs, trace_id / order_id correlation
-  → 4. (prod) distributed traces — upstream/downstream (OTel/Tempo — next session)
+  → 3. Loki — payment_gateway_timeout, trace_id / order_id
+  → 4. Jaeger — payment.charge span, upstream attributes
+  → 5. (prod) escalate with timeframe, trace_id, upstream/downstream blast radius
 ```
+
+See [grafana-alerts.md](grafana-alerts.md) for alert rule examples.
 
 ```bash
 kubectl get pods -n order-api
@@ -197,10 +201,23 @@ See [load-test.md](load-test.md) — `traffic-generator.yaml` posts to `/order` 
 
 ---
 
-## 11. Coming next
+## 11. Part B — OTEL, Jaeger, Grafana alerts (done)
 
-- **OpenTelemetry** — traces correlated with logs (`trace_id`) + metrics
-- **CI/CD weekend** — GitHub Actions build/push image, deploy to kind
+Runbook: [part-b-guide.md](part-b-guide.md)
+
+| Piece | File |
+|-------|------|
+| OTEL collector | `otel-collector.yaml` |
+| Jaeger all-in-one | `jaeger.yaml` |
+| order-api v2 + OTLP env | `order-api-deployment.yaml` |
+| Alert rules (UI) | [grafana-alerts.md](grafana-alerts.md) |
+
+**Interview line:** logs carry `trace_id` → Loki search → same trace in Jaeger → nested spans show which dependency failed.
+
+## 12. Coming next
+
+- **CI/CD weekend** — GitHub Actions build/push `order-api`, deploy to kind
+- **GitOps** — ArgoCD sync narrative (resume + optional lab)
 
 ---
 

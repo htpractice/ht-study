@@ -14,6 +14,7 @@ Cluster: `kind-cka-cluster01` · App: `order-api` · Stack: Loki + Prometheus + 
 | Prometheus + kube-state-metrics (Helm) | **OK** — scrape delay ~30s normal |
 | Dashboard 6417 import | **Partial** — core panels work; some stale queries empty |
 | Loki ↔ Grafana Save & test | **Red** — false negative; Explore works |
+| Part B — OTEL + Jaeger + alerts | **OK** — traces, log correlation, Grafana alert rules |
 
 **Takeaway:** 404 on `http://loki:3100/` is normal. Verify with `/ready` and `/loki/api/v1/labels`. Empty dashboard panels usually mean metric/label mismatch, not broken pods.
 
@@ -77,14 +78,31 @@ orders_created_total{namespace="order-api"}
 
 ---
 
+## Part B — OTEL, Jaeger, Grafana alerts
+
+Runbook: [part-b-guide.md](part-b-guide.md)
+
+| Step | Result |
+|------|--------|
+| Deploy `jaeger.yaml`, `otel-collector.yaml` | **OK** |
+| Build/push `order-api-lab:v2`, rollout | **OK** |
+| Jaeger UI — `POST /order` traces | **OK** — nested spans `create_order`, `payment.charge` |
+| Loki ↔ trace_id correlation | **OK** |
+| Grafana unified alerts (503 rate) | **OK** — see [grafana-alerts.md](grafana-alerts.md) |
+
+**Note:** Jaeger service list empty until POST traffic after v2 deploy. GET `/health` alone produces minimal traces.
+
+---
+
 ## Incident triage flow (interview)
 
 ```
 Alert (503 rate)
   → 1. Dashboard — confirm spike in reported timeframe
   → 2. kubectl — pods ready? restarts? endpoints populated?
-  → 3. Loki — payment_gateway_timeout, trace_id correlation
-  → 4. (prod) traces for upstream/downstream dependencies
+  → 3. Loki — payment_gateway_timeout, trace_id
+  → 4. Jaeger — payment.charge span attributes
+  → 5. Escalate with timeframe, trace_id, upstream/downstream
 ```
 
 ---

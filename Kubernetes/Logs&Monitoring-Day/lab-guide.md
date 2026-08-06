@@ -279,9 +279,8 @@ kubectl delete ns order-api observability
 
 ---
 
-## Next steps (optional)
+## Next steps
 
-- Add Grafana dashboard JSON for order-api
-- Alertmanager rule: 503 rate > threshold
-- OpenTelemetry collector (traces + logs + metrics unified)
+- **Part B (done in repo):** [part-b-guide.md](part-b-guide.md) — OTEL collector, Jaeger, Grafana unified alerts
+- CI/CD weekend — GitHub Actions build/push/deploy `order-api`
 - Gateway API / ServiceMonitor with kube-prometheus-stack (heavier, production-grade)
