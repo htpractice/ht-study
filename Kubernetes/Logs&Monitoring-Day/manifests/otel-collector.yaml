@@ -1,6 +1,6 @@
 # OpenTelemetry Collector — receives OTLP from order-api, exports traces to Jaeger + metrics for Prometheus
 #
-# Apply: kubectl apply -f otel-collector.yaml
+# Apply: kubectl apply -f manifests/otel-collector.yaml
 # Verify: kubectl get pods -n observability -l app=otel-collector
 ---
 apiVersion: v1

@@ -7,7 +7,7 @@ Use these after Prometheus and Loki are running. Allow **1–2 scrape intervals*
 ## Option 1 — Built-in Job (easiest)
 
 ```bash
-kubectl apply -f traffic-generator.yaml
+kubectl apply -f manifests/traffic-generator.yaml
 kubectl logs -n order-api job/traffic-generator -f
 ```
 

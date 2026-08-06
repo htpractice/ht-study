@@ -2,7 +2,7 @@
 #
 # Install:
 #   helm install prometheus prometheus-community/prometheus \
-#     -n observability -f prometheus-values.yaml
+#     -n observability -f manifests/prometheus-values.yaml
 #
 # Grafana datasource URL: http://prometheus-server:80
 #

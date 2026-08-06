@@ -10,6 +10,8 @@ Kubelet/cAdvisor        →  Metrics Server     →  kubectl top / HPA
 
 Cluster: `kind-cka-cluster01` (metrics-server already installed)
 
+Run `kubectl` / `helm` from the **lab root** (`Logs&Monitoring-Day/`); manifests live in `manifests/`.
+
 ---
 
 ## Phase 0 — What your course covered (baseline)
@@ -49,9 +51,9 @@ curl localhost:8080/metrics | head
 
 ```bash
 cd ..
-kubectl apply -f namespace.yaml
-kubectl apply -f order-api-deployment.yaml
-kubectl apply -f order-api-service.yaml
+kubectl apply -f manifests/namespace.yaml
+kubectl apply -f manifests/order-api-deployment.yaml
+kubectl apply -f manifests/order-api-service.yaml
 
 kubectl wait -n order-api --for=condition=ready pod -l app=order-api --timeout=120s
 kubectl get pods,svc -n order-api
@@ -116,7 +118,7 @@ helm repo update
 
 helm install loki grafana/loki-stack \
   -n observability --create-namespace \
-  -f loki-stack-values.yaml
+  -f manifests/loki-stack-values.yaml
 ```
 
 Wait for pods:
@@ -166,7 +168,7 @@ helm repo update
 
 helm install prometheus prometheus-community/prometheus \
   -n observability \
-  -f prometheus-values.yaml
+  -f manifests/prometheus-values.yaml
 ```
 
 Verify scrape targets:

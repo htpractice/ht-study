@@ -2,7 +2,7 @@
 #
 # Install:
 #   helm install loki grafana/loki-stack \
-#     -n observability --create-namespace -f loki-stack-values.yaml
+#     -n observability --create-namespace -f manifests/loki-stack-values.yaml
 #
 # Components:
 #   Promtail (DaemonSet) → tails pod stdout on every node → pushes to Loki

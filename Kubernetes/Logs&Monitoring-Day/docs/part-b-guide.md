@@ -4,6 +4,8 @@
 
 **Prerequisite:** Part A running (Loki, Prometheus, Grafana, order-api v1)
 
+Run commands from the **lab root** (`Logs&Monitoring-Day/`); manifests in `manifests/`.
+
 ---
 
 ## Architecture
@@ -29,8 +31,8 @@ Grafana: Prometheus + Loki + Jaeger datasources → unified alerts
 ```bash
 cd ht-study/Kubernetes/Logs\&Monitoring-Day
 
-kubectl apply -f jaeger.yaml
-kubectl apply -f otel-collector.yaml
+kubectl apply -f manifests/jaeger.yaml
+kubectl apply -f manifests/otel-collector.yaml
 
 kubectl wait -n observability --for=condition=ready pod -l app=jaeger --timeout=120s
 kubectl wait -n observability --for=condition=ready pod -l app=otel-collector --timeout=120s
@@ -53,14 +55,14 @@ docker build -t hthaware2508/order-api-lab:v2 .
 docker push hthaware2508/order-api-lab:v2
 
 cd ..
-kubectl apply -f order-api-deployment.yaml
+kubectl apply -f manifests/order-api-deployment.yaml
 kubectl rollout status deployment/order-api -n order-api --timeout=120s
 ```
 
 **Generate traffic:**
 
 ```bash
-kubectl apply -f traffic-generator.yaml
+kubectl apply -f manifests/traffic-generator.yaml
 # or a few manual curls
 ```
 
@@ -131,7 +133,7 @@ After collector is up, upgrade Prometheus to also scrape `:8889`:
 
 ```bash
 helm upgrade prometheus prometheus-community/prometheus \
-  -n observability -f prometheus-values.yaml
+  -n observability -f manifests/prometheus-values.yaml
 ```
 
 Look for OTEL metrics like `orders_created_total` from collector export (may differ from app `/metrics` names).
@@ -165,6 +167,6 @@ Both valid in prod — often Prometheus fires → Alertmanager **or** Grafana ma
 ## Cleanup (optional)
 
 ```bash
-kubectl delete -f jaeger.yaml -f otel-collector.yaml
+kubectl delete -f manifests/jaeger.yaml -f manifests/otel-collector.yaml
 # rollback: kubectl set image deployment/order-api order-api=hthaware2508/order-api-lab:v1 -n order-api
 ```

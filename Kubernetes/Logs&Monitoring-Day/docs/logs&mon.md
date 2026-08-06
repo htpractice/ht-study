@@ -1,5 +1,7 @@
 # Logs & Monitoring Day — Notes
 
+**Layout:** `docs/` (guides & notes) · `manifests/` (YAML) · `APP/` (Docker source)
+
 Course intro + advanced lab: **Metrics Server**, **logging**, **Prometheus/Loki/Grafana**, and incident triage.
 
 **Lab files:** [lab-guide.md](lab-guide.md) (Part A) · [part-b-guide.md](part-b-guide.md) (OTEL/Jaeger/alerts) · [load-test.md](load-test.md) · [output.md](output.md)
@@ -197,7 +199,7 @@ Don't confuse Metrics Server with Prometheus — CKA tests the former; productio
 
 ## 10. Load testing
 
-See [load-test.md](load-test.md) — `traffic-generator.yaml` posts to `/order` (~15% intentional 503s).
+See [load-test.md](load-test.md) — `manifests/traffic-generator.yaml` posts to `/order` (~15% intentional 503s).
 
 ---
 
@@ -207,9 +209,9 @@ Runbook: [part-b-guide.md](part-b-guide.md)
 
 | Piece | File |
 |-------|------|
-| OTEL collector | `otel-collector.yaml` |
-| Jaeger all-in-one | `jaeger.yaml` |
-| order-api v2 + OTLP env | `order-api-deployment.yaml` |
+| OTEL collector | `manifests/otel-collector.yaml` |
+| Jaeger all-in-one | `manifests/jaeger.yaml` |
+| order-api v2 + OTLP env | `manifests/order-api-deployment.yaml` |
 | Alert rules (UI) | [grafana-alerts.md](grafana-alerts.md) |
 
 **Interview line:** logs carry `trace_id` → Loki search → same trace in Jaeger → nested spans show which dependency failed.

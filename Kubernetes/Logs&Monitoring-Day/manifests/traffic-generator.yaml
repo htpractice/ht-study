@@ -4,7 +4,7 @@
 #   - Prometheus: rate(http_requests_total{status="503"}[1m])
 #   - Loki: {namespace="order-api"} |= "payment_gateway_timeout"
 #
-# Apply: kubectl apply -f traffic-generator.yaml
+# Apply: kubectl apply -f manifests/traffic-generator.yaml
 # Logs:  kubectl logs -n order-api job/traffic-generator -f
 ---
 apiVersion: batch/v1

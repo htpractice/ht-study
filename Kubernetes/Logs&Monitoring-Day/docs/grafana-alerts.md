@@ -46,7 +46,7 @@ sum(rate(http_requests_total{namespace="order-api",status="503"}[5m]))
 
 8. **Save**
 
-**Test:** run `traffic-generator.yaml`, wait 2–3 min, refresh Alert rules page.
+**Test:** run `manifests/traffic-generator.yaml`, wait 2–3 min, refresh Alert rules page.
 
 ---
 

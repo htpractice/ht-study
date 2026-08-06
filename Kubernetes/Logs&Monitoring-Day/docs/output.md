@@ -35,7 +35,7 @@ order-api (JSON logs + /metrics)
 
 ```bash
 cd APP && docker build -t hthaware2508/order-api-lab:v1 . && docker push hthaware2508/order-api-lab:v1
-kubectl apply -f namespace.yaml -f order-api-deployment.yaml -f order-api-service.yaml
+kubectl apply -f manifests/namespace.yaml -f manifests/order-api-deployment.yaml -f manifests/order-api-service.yaml
 ```
 
 Both pods `1/1 Running`. Structured JSON logs on stdout. POST `/order` returns 201 or 503 (~15% payment timeout by design).
@@ -60,8 +60,8 @@ curl -s http://loki:3100                          # 404 — expected, not a netw
 ## Phase 3 — Prometheus + dashboard 6417
 
 ```bash
-helm install prometheus prometheus-community/prometheus -n observability -f prometheus-values.yaml
-helm upgrade prometheus prometheus-community/prometheus -n observability -f prometheus-values.yaml  # enabled kube-state-metrics
+helm install prometheus prometheus-community/prometheus -n observability -f manifests/prometheus-values.yaml
+helm upgrade prometheus prometheus-community/prometheus -n observability -f manifests/prometheus-values.yaml  # enabled kube-state-metrics
 ```
 
 Grafana datasource: `http://prometheus-server:80`
@@ -84,7 +84,7 @@ Runbook: [part-b-guide.md](part-b-guide.md)
 
 | Step | Result |
 |------|--------|
-| Deploy `jaeger.yaml`, `otel-collector.yaml` | **OK** |
+| Deploy `manifests/jaeger.yaml`, `manifests/otel-collector.yaml` | **OK** |
 | Build/push `order-api-lab:v2`, rollout | **OK** |
 | Jaeger UI — `POST /order` traces | **OK** — nested spans `create_order`, `payment.charge` |
 | Loki ↔ trace_id correlation | **OK** |
@@ -120,7 +120,7 @@ Alert (503 rate)
 
 ## Load test
 
-See [load-test.md](load-test.md) — `traffic-generator.yaml` or `hey` against port-forward.
+See [load-test.md](load-test.md) — `manifests/traffic-generator.yaml` or `hey` against port-forward.
 
 ---
 
