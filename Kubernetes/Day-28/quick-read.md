@@ -1,6 +1,6 @@
 # Day 28 — DNS Quick Read
 
-Full notes: [day-28-notes.md](./day-28-notes.md) · Lab: [practical-output.md](./practical-output.md)
+Full notes: [day-28-notes.md](./day-28-notes.md) · Lab: [practice-output.md](./practice-output.md)
 
 ---
 

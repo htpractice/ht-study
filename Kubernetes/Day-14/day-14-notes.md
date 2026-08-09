@@ -43,7 +43,7 @@ kc taint nodes <node-name> key=value:NoSchedule-
 kc taint node cka-cluster01-worker2 gpu=true:NoSchedule
 ```
 
-### Pod toleration (see `tolleration-pod.yaml`)
+### Pod toleration (see `toleration-pod.yaml`)
 
 ```yaml
 tolerations:
@@ -140,7 +140,7 @@ cpu: 100m       # correct — millicores
 
 | File | Purpose |
 |------|---------|
-| `tolleration-pod.yaml` | Pod with GPU taint toleration |
+| `toleration-pod.yaml` | Pod with GPU taint toleration |
 | `nodeselector-pod.yaml` | Pod pinned via `nodeSelector: gpu: "true"` |
 | `day-14-commands.md` | Command sequence used in practice |
 
@@ -151,7 +151,7 @@ cpu: 100m       # correct — millicores
 kc taint node <worker> gpu=true:NoSchedule
 
 # 2. Apply toleration pod — can schedule on tainted node
-kc apply -f tolleration-pod.yaml
+kc apply -f toleration-pod.yaml
 
 # 3. Label another node, apply nodeSelector pod
 kc label node <worker2> gpu=true
@@ -159,7 +159,7 @@ kc apply -f nodeselector-pod.yaml
 
 # 4. Verify placement
 kc get pods -o wide
-kc describe pod tolleration-pod
+kc describe pod toleration-pod
 kc describe pod nodeselector-pod
 ```
 

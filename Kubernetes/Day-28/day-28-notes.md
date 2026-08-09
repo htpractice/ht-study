@@ -1,6 +1,6 @@
 # Day 28 — DNS (Internet fundamentals + CoreDNS)
 
-**Quick read:** [quick-read.md](./quick-read.md) · Lab: [practical-output.md](./practical-output.md)
+**Quick read:** [quick-read.md](./quick-read.md) · Lab: [practice-output.md](./practice-output.md)
 
 Connects **Day 10** (FQDN / namespaces) and **Day 26** (DNS resolves IP → NetworkPolicy allows or blocks traffic).
 
@@ -330,7 +330,7 @@ kubectl get svc kube-dns -n kube-system
 | `curl php-apache` from **default** pod | **FAIL** — NXDOMAIN |
 | `curl php-apache.hpa-vpa.svc.cluster.local` | **OK** — FQDN cross-ns |
 
-Full output: [practical-output.md](./practical-output.md)
+Full output: [practice-output.md](./practice-output.md)
 
 ### Lab checklist
 

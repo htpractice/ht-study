@@ -25,7 +25,7 @@ helm repo add traefik https://traefik.github.io/charts
 helm repo update
 helm install traefik traefik/traefik \
   -n traefik --create-namespace \
-  -f traefik-values.yaml
+  -f manifests/traefik-values.yaml
 ```
 
 ```
@@ -49,10 +49,10 @@ kubectl wait -n traefik \
 ## 2. Deploy app + Ingress
 
 ```bash
-kubectl apply -f namespaces.yaml
-kubectl apply -f web-deployment.yaml
-kubectl apply -f web-svc.yaml
-kubectl apply -f ingress.yaml
+kubectl apply -f manifests/namespaces.yaml
+kubectl apply -f manifests/web-deployment.yaml
+kubectl apply -f manifests/web-svc.yaml
+kubectl apply -f manifests/ingress.yaml
 ```
 
 ```
@@ -107,14 +107,14 @@ deployment.apps/web-deployment   1/1     1            1           25m
 **Fix:**
 
 ```yaml
-# web-svc.yaml
+# manifests/web-svc.yaml
 ports:
   - port: 80
     targetPort: 8080   # was 80
 ```
 
 ```bash
-kubectl apply -f web-svc.yaml
+kubectl apply -f manifests/web-svc.yaml
 curl -H "Host: www.example.com" http://localhost:8080
 # Hello, World! from Flask
 ```

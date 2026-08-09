@@ -31,7 +31,7 @@ This video from the *CKA 2024* series covers the implementation and management o
 This folder demonstrates a dependency chain across four manifests:
 
 ```text
-multicon-ns.yaml  →  multicon-deploy.yaml  →  multi-con-svc.yaml  →  muti-conatiner-pod.yaml
+multicon-ns.yaml  →  multicon-deploy.yaml  →  multi-con-svc.yaml  →  multi-container-pod.yaml
    (namespace)      (nginx + redis pods)      (web + db Services)     (2 inits → app)
 ```
 
@@ -43,7 +43,7 @@ kc apply -f multicon-ns.yaml
 kc apply -f multicon-deploy.yaml
 kc apply -f multi-con-svc.yaml
 kc get endpoints -n multicon                      # confirm both services have backends
-kc apply -f muti-conatiner-pod.yaml
+kc apply -f multi-container-pod.yaml
 kc get pod multi-con-pod -n multicon -w           # Init:0/2 → Init:2/2 → Running
 ```
 

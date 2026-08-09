@@ -7,7 +7,7 @@
 # With toleration, this pod CAN — but is not forced to (other untainted nodes still work).
 #
 # Generate base:
-#   kc run tolleration-pod --image=nginx --dry-run=client -o yaml > tolleration-pod.yaml
+#   kc run toleration-pod --image=nginx --dry-run=client -o yaml > toleration-pod.yaml
 #
 # Remove taint:
 #   kc taint node <node-name> gpu=true:NoSchedule-
@@ -15,12 +15,12 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    run: tolleration-pod
-  name: tolleration-pod
+    run: toleration-pod
+  name: toleration-pod
 spec:
   containers:
   - image: nginx
-    name: tolleration-pod
+    name: toleration-pod
     resources:
       requests:
         memory: 64Mi

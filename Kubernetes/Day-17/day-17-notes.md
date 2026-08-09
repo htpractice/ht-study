@@ -63,7 +63,7 @@ kc get hpa php-apache -n hpa-vpa -w
 kc describe hpa php-apache -n hpa-vpa    # Events show scaling decisions
 ```
 
-Optional — faster scale-down for lab/testing (see `hpa.yml`):
+Optional — faster scale-down for lab/testing (see `docs/hpa-reference.md`):
 
 ```yaml
 behavior:
@@ -104,14 +104,14 @@ behavior:
 |------|---------|
 | `hpa-vpa-ns.yaml` | Namespace `hpa-vpa` |
 | `hpa-deploy.yaml` | php-apache Deployment + Service (official HPA example image) |
-| `hpa.yml` | HorizontalPodAutoscaler — CPU 50%, min 1, max 10 |
+| `hpa.yaml` | HorizontalPodAutoscaler — CPU 50%, min 1, max 10 |
 
 ### Apply order
 
 ```bash
 kc apply -f hpa-vpa-ns.yaml
 kc apply -f hpa-deploy.yaml
-kc apply -f hpa.yml
+kc apply -f hpa.yaml
 kc get hpa -n hpa-vpa -w
 ```
 

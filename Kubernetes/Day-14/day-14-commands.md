@@ -3,10 +3,10 @@
 
 | Command | Purpose |
 |---------|---------|
-| `kc run tolleration-pod --image=nginx --dry-run=client -o yaml > tolleration-pod.yaml` | Generate base pod YAML |
-| `kc apply -f tolleration-pod.yaml` | Apply pod with toleration |
+| `kc run toleration-pod --image=nginx --dry-run=client -o yaml > toleration-pod.yaml` | Generate base pod YAML |
+| `kc apply -f toleration-pod.yaml` | Apply pod with toleration |
 | `kc get po` | List pods |
-| `kc describe po tolleration-pod` | Verify toleration and node placement |
+| `kc describe po toleration-pod` | Verify toleration and node placement |
 | `kc describe no cka-cluster01-worker2` | Inspect node taints/labels |
 | `kc taint node cka-cluster01-worker2 gpu=false:NoSchedule-` | Remove taint (trailing dash) |
 | `kc taint node cka-cluster01-worker gpu=false:NoSchedule-` | Remove taint from worker |

@@ -34,42 +34,6 @@
 #   2. Wait stabilizationWindowSeconds (60s below, not default 300s)
 #   kc get hpa php-apache -n hpa-vpa -w
 #
-# GENERATE BASE YAML (CKA exam):
-#   kc autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10 \
-#     -n hpa-vpa --dry-run=client -o yaml > hpa.yml
 # =============================================================================
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: php-apache
-  namespace: hpa-vpa
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: php-apache
-  minReplicas: 1
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 50
-  # behavior is a SIBLING of metrics — NOT nested inside target
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 60
-      policies:
-      - type: Percent
-        value: 50
-        periodSeconds: 60
-      selectPolicy: Max
-    scaleUp:
-      stabilizationWindowSeconds: 0
-      policies:
-      - type: Percent
-        value: 100
-        periodSeconds: 15
-      selectPolicy: Max
+# End of reference — apply the lab manifest: ../hpa.yaml
+# =============================================================================

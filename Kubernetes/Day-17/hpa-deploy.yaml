@@ -3,7 +3,7 @@
 # requests.cpu: 200m is REQUIRED — HPA calculates utilization as % of request
 # limits.cpu: 500m caps max CPU per pod
 #
-# Apply before hpa.yml:
+# Apply before hpa.yaml:
 #   kc apply -f hpa-vpa-ns.yaml
 #   kc apply -f hpa-deploy.yaml
 apiVersion: apps/v1

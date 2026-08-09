@@ -5,7 +5,7 @@
 # Lesson learned: mysql:latest needs env vars (MYSQL_ROOT_PASSWORD) and more memory —
 # switched to redis:latest for a simpler db sidecar in local Kind practice.
 #
-# Apply before: multi-con-svc.yaml, muti-conatiner-pod.yaml
+# Apply before: multi-con-svc.yaml, multi-container-pod.yaml
 # Generate base: kc create deployment multi-con-deploy --image=nginx -n multicon --dry-run=client -o yaml
 apiVersion: apps/v1
 kind: Deployment

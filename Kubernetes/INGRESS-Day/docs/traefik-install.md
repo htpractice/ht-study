@@ -6,9 +6,9 @@ Community **ingress-nginx** retired in March 2026. The **Ingress API** is still 
 
 | Component | Namespace | File |
 |-----------|-----------|------|
-| Traefik controller | `traefik` | Helm + `traefik-values.yaml` (or `traefik-manifest.yaml` without Helm) |
-| Web app | `web-app` | `web-deployment.yaml`, `web-svc.yaml` |
-| Ingress rules | `web-app` | `ingress.yaml` |
+| Traefik controller | `traefik` | Helm + `manifests/traefik-values.yaml` (or `manifests/traefik-manifest.yaml` without Helm) |
+| Web app | `web-app` | `manifests/web-deployment.yaml`, `manifests/web-svc.yaml` |
+| Ingress rules | `web-app` | `manifests/ingress.yaml` |
 
 Traffic flow: **Client → Traefik → web-svc (ClusterIP) → Pod**
 
@@ -31,7 +31,7 @@ helm repo add traefik https://traefik.github.io/charts
 helm repo update
 helm install traefik traefik/traefik \
   -n traefik --create-namespace \
-  -f traefik-values.yaml
+  -f manifests/traefik-values.yaml
 
 # 3. Wait for Traefik
 kubectl wait -n traefik \
@@ -40,10 +40,10 @@ kubectl wait -n traefik \
   --timeout=120s
 
 # 4. Deploy app + Ingress
-kubectl apply -f namespaces.yaml
-kubectl apply -f web-deployment.yaml
-kubectl apply -f web-svc.yaml
-kubectl apply -f ingress.yaml
+kubectl apply -f manifests/namespaces.yaml
+kubectl apply -f manifests/web-deployment.yaml
+kubectl apply -f manifests/web-svc.yaml
+kubectl apply -f manifests/ingress.yaml
 
 # 5. Port-forward Traefik (separate terminal)
 kubectl port-forward -n traefik svc/traefik 8080:80
@@ -66,16 +66,16 @@ Then: `curl http://www.example.com:8080`
 
 ```bash
 kind create cluster --name ingress-lab
-kubectl apply -f traefik-manifest.yaml
+kubectl apply -f manifests/traefik-manifest.yaml
 kubectl wait -n traefik \
   --for=condition=ready pod \
   -l app.kubernetes.io/name=traefik \
   --timeout=120s
 
-kubectl apply -f namespaces.yaml
-kubectl apply -f web-deployment.yaml
-kubectl apply -f web-svc.yaml
-kubectl apply -f ingress.yaml
+kubectl apply -f manifests/namespaces.yaml
+kubectl apply -f manifests/web-deployment.yaml
+kubectl apply -f manifests/web-svc.yaml
+kubectl apply -f manifests/ingress.yaml
 
 kubectl port-forward -n traefik svc/traefik 8080:80
 curl -H "Host: www.example.com" http://localhost:8080
@@ -83,22 +83,22 @@ curl -H "Host: www.example.com" http://localhost:8080
 
 ## Option C: kind with host port 80
 
-Use `kind-ingress-config.yaml` so Traefik binds to port 80 on the kind node.
+Use `manifests/kind-ingress-config.yaml` so Traefik binds to port 80 on the kind node.
 
 ```bash
 kind delete cluster --name ingress-lab 2>/dev/null || true
-kind create cluster --name ingress-lab --config kind-ingress-config.yaml
+kind create cluster --name ingress-lab --config manifests/kind-ingress-config.yaml
 
 helm repo add traefik https://traefik.github.io/charts
 helm repo update
 helm install traefik traefik/traefik \
   -n traefik --create-namespace \
-  -f traefik-values-kind-hostport.yaml
+  -f manifests/traefik-values-kind-hostport.yaml
 
-kubectl apply -f namespaces.yaml
-kubectl apply -f web-deployment.yaml
-kubectl apply -f web-svc.yaml
-kubectl apply -f ingress.yaml
+kubectl apply -f manifests/namespaces.yaml
+kubectl apply -f manifests/web-deployment.yaml
+kubectl apply -f manifests/web-svc.yaml
+kubectl apply -f manifests/ingress.yaml
 
 # Map host to kind node (Docker Desktop / Linux)
 # Add to /etc/hosts: 127.0.0.1 www.example.com

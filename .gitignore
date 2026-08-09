@@ -8,3 +8,25 @@ Kubernetes/AEP-local-to-k8s/
 **/csr/*.crt
 **/monitoring-bot.crt
 **/kubectl-calico
+
+# Terraform — never commit local cache, state, plans, or secrets
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+**/tfplan
+**/tfdestroyplan
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+*_override.tf
+*.auto.tfvars
+**/terraform.tfvars
+**/private_key.pem
+**/plan.txt
+**/destroy-plan.txt
+**/kubectl.sha256
+*.bkp

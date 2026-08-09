@@ -46,7 +46,7 @@ flowchart LR
 
 | File | Purpose |
 |------|---------|
-| `deamon-monitoring-ns.yaml` | Namespace (course spelling) |
+| `daemon-monitoring-ns.yaml` | Namespace (course spelling: `deamon-monitoring`) |
 | `monitoring-bot.yaml` | ServiceAccount |
 | `monitoring-bot-secrets.yaml` | Legacy SA token Secret (course demo) |
 | `monitoring-role.yaml` | Role — get/list/watch pods |
@@ -58,7 +58,7 @@ flowchart LR
 ```bash
 kc config use-context kind-cka-cluster01
 cd Kubernetes/Day-25
-kc apply -f deamon-monitoring-ns.yaml
+kc apply -f daemon-monitoring-ns.yaml
 kc apply -f monitoring-bot.yaml
 kc apply -f monitoring-bot-secrets.yaml
 kc apply -f monitoring-role.yaml
