@@ -26,8 +26,8 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = "default"
+  region = var.aws_region
+  # No profile — GHA uses AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY; locally use default creds or AWS_PROFILE
 
   default_tags {
     tags = {
