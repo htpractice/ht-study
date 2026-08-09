@@ -64,17 +64,22 @@ output "ssh_workers" {
   }
 }
 
-output "bootstrap_next_steps" {
-  description = "Post-apply bootstrap from your laptop (SG allows your IP only)"
-  value = var.copy_scripts_via_ssh ? <<-EOT
+locals {
+  bootstrap_steps_common = <<-EOT
     m1: sudo bash ~/prep-node-master.sh
     workers: export JOIN_CMD='kubeadm join ...' && sudo -E bash ~/prep-node-worker.sh
     kubeconfig: ~/.kube/config-kubeadm-${var.environment}
   EOT
-  : <<-EOT
+
+  bootstrap_steps_ci = <<-EOT
     scripts: Kubernetes/KubeADM-Day/scripts/copy-scripts-to-nodes.sh ${var.environment}
     m1: sudo bash ~/prep-node-master.sh
     workers: export JOIN_CMD='kubeadm join ...' && sudo -E bash ~/prep-node-worker.sh
     kubeconfig: ~/.kube/config-kubeadm-${var.environment}
   EOT
+}
+
+output "bootstrap_next_steps" {
+  description = "Post-apply bootstrap from your laptop (SG allows your IP only)"
+  value       = var.copy_scripts_via_ssh ? local.bootstrap_steps_common : local.bootstrap_steps_ci
 }
