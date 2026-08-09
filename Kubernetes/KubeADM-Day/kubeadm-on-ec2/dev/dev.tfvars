@@ -1,6 +1,6 @@
 # order-api app cluster — dev
 # Apply: terraform apply -var-file=dev.tfvars
-# CD: push to cka-2026-study under kubeadm-on-ec2/** triggers GHA plan + apply (dev approval)
+# CD: push kubeadm-on-ec2/** on cka-2026-study → GHA plan + apply (dev approval)
 # Future: copy dev/ → tooling/ with cluster_role=tooling for Argo/Prometheus cluster
 
 environment   = "dev"
