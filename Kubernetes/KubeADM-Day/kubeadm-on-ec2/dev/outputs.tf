@@ -65,8 +65,14 @@ output "ssh_workers" {
 }
 
 output "bootstrap_next_steps" {
-  description = "Scripts are on nodes under ~/ — run after apply"
-  value       = <<-EOT
+  description = "Post-apply bootstrap from your laptop (SG allows your IP only)"
+  value = var.copy_scripts_via_ssh ? <<-EOT
+    m1: sudo bash ~/prep-node-master.sh
+    workers: export JOIN_CMD='kubeadm join ...' && sudo -E bash ~/prep-node-worker.sh
+    kubeconfig: ~/.kube/config-kubeadm-${var.environment}
+  EOT
+  : <<-EOT
+    scripts: Kubernetes/KubeADM-Day/scripts/copy-scripts-to-nodes.sh ${var.environment}
     m1: sudo bash ~/prep-node-master.sh
     workers: export JOIN_CMD='kubeadm join ...' && sudo -E bash ~/prep-node-worker.sh
     kubeconfig: ~/.kube/config-kubeadm-${var.environment}

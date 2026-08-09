@@ -92,3 +92,9 @@ variable "my_local_IP" {
   type        = string
   default     = ""
 }
+
+variable "copy_scripts_via_ssh" {
+  description = "Stage bootstrap scripts via Terraform SSH provisioners. Set false in CI (run copy-scripts-to-nodes.sh from laptop instead)."
+  type        = bool
+  default     = true
+}

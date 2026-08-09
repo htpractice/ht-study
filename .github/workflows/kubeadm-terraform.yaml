@@ -133,6 +133,8 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          TF_VAR_copy_scripts_via_ssh: "false"
         run: |
           set -o pipefail
           terraform plan -var-file="${TF_VAR_FILE}" -no-color -input=false -out=tfplan 2>&1 | tee plan.txt

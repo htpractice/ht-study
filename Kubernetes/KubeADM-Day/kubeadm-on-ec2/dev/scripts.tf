@@ -1,5 +1,5 @@
 # Stage kubeadm bootstrap scripts on nodes via file provisioner (+ chmod only).
-# Re-runs when script content or instance changes (see triggers).
+# Skipped when copy_scripts_via_ssh=false (GitHub Actions — SG allows laptop IP only).
 
 locals {
   scripts_dir = abspath("${path.module}/../../scripts")
@@ -12,7 +12,7 @@ locals {
 }
 
 resource "null_resource" "copy_scripts_master" {
-  for_each = module.master
+  for_each = var.copy_scripts_via_ssh ? module.master : {}
 
   triggers = {
     scripts_hash = local.all_scripts_hash
@@ -45,7 +45,7 @@ resource "null_resource" "copy_scripts_master" {
 }
 
 resource "null_resource" "copy_scripts_worker" {
-  for_each = module.worker
+  for_each = var.copy_scripts_via_ssh ? module.worker : {}
 
   triggers = {
     scripts_hash = local.all_scripts_hash
