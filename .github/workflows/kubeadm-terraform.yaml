@@ -42,7 +42,7 @@ permissions:
 
 jobs:
   terraform-plan:
-    name: "Terraform Plan (${{ steps.env-vars.outputs.tf_env }})"
+    name: "Terraform Plan (${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'dev' }})"
     runs-on: ubuntu-latest
     outputs:
       tf_env: ${{ steps.env-vars.outputs.tf_env }}
