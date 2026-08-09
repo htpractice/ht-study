@@ -1,0 +1,170 @@
+# Kubeadm EC2 teardown — manual only (never triggered by push/PR)
+#
+#   Run workflow → choose dev | prod → type "destroy" → plan -destroy → destroy (waits for approval)
+#
+# Configure repo Settings → Environments → dev / prod → Required reviewers
+# (same gates as apply; destroy always requires workflow_dispatch + confirmation input)
+
+name: Kubeadm Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to destroy"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      confirm_destroy:
+        description: 'Type "destroy" to confirm teardown'
+        required: true
+        type: string
+
+env:
+  TF_LOG: INFO
+  AWS_REGION: us-west-2
+  TF_ROOT_BASE: Kubernetes/KubeADM-Day/kubeadm-on-ec2
+
+permissions:
+  contents: read
+
+jobs:
+  confirm:
+    name: Confirm destroy request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation and branch
+        run: |
+          if [[ "${{ github.event.inputs.confirm_destroy }}" != "destroy" ]]; then
+            echo "Confirmation failed: type exactly 'destroy' in confirm_destroy."
+            exit 1
+          fi
+          if [[ "${{ github.ref_name }}" != "cka-2026-study" ]]; then
+            echo "Destroy is only allowed from branch cka-2026-study (current: ${{ github.ref_name }})."
+            exit 1
+          fi
+          echo "Confirmed destroy for environment: ${{ github.event.inputs.environment }}"
+
+  terraform-plan-destroy:
+    name: "Terraform Plan Destroy (${{ github.event.inputs.environment }})"
+    needs: confirm
+    runs-on: ubuntu-latest
+    outputs:
+      tf_env: ${{ steps.env-vars.outputs.tf_env }}
+      tf_var_file: ${{ steps.env-vars.outputs.tf_var_file }}
+      working_directory: ${{ steps.env-vars.outputs.working_directory }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+
+      - name: Set environment
+        id: env-vars
+        run: |
+          TF_ENV="${{ github.event.inputs.environment }}"
+          echo "tf_env=${TF_ENV}" >> "$GITHUB_OUTPUT"
+          echo "tf_var_file=${TF_ENV}.tfvars" >> "$GITHUB_OUTPUT"
+          echo "working_directory=${{ env.TF_ROOT_BASE }}/${TF_ENV}" >> "$GITHUB_OUTPUT"
+          echo "TF_ENV=${TF_ENV}" >> "$GITHUB_ENV"
+          echo "TF_VAR_FILE=${TF_ENV}.tfvars" >> "$GITHUB_ENV"
+          echo "WORKING_DIRECTORY=${{ env.TF_ROOT_BASE }}/${TF_ENV}" >> "$GITHUB_ENV"
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform validate
+
+      - name: Terraform Plan Destroy
+        id: plan
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          set -o pipefail
+          terraform plan -destroy -var-file="${TF_VAR_FILE}" -no-color -input=false -out=tfdestroyplan 2>&1 | tee destroy-plan.txt
+        continue-on-error: true
+
+      - name: Terraform Plan Destroy Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Upload destroy plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfdestroyplan-${{ env.TF_ENV }}
+          path: ${{ env.WORKING_DIRECTORY }}/tfdestroyplan
+          if-no-files-found: error
+
+      - name: Upload destroy plan output
+        uses: actions/upload-artifact@v4
+        with:
+          name: destroy-plan-output-${{ env.TF_ENV }}
+          path: ${{ env.WORKING_DIRECTORY }}/destroy-plan.txt
+          if-no-files-found: error
+
+  terraform-destroy:
+    name: "Terraform Destroy (${{ needs.terraform-plan-destroy.outputs.tf_env }})"
+    needs: terraform-plan-destroy
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.terraform-plan-destroy.outputs.tf_env }}
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+
+      - name: Restore env from plan job
+        run: |
+          echo "TF_ENV=${{ needs.terraform-plan-destroy.outputs.tf_env }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_FILE=${{ needs.terraform-plan-destroy.outputs.tf_var_file }}" >> "$GITHUB_ENV"
+          echo "WORKING_DIRECTORY=${{ needs.terraform-plan-destroy.outputs.working_directory }}" >> "$GITHUB_ENV"
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform init -input=false
+
+      - name: Download destroy plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfdestroyplan-${{ env.TF_ENV }}
+          path: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Terraform Destroy
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform apply -input=false tfdestroyplan
