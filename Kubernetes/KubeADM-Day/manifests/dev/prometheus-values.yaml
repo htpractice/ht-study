@@ -17,11 +17,23 @@ alertmanager:
   enabled: false
 kube-state-metrics:
   enabled: true
+  prometheus:
+    monitor:
+      enabled: true
+      relabelings:
+        - targetLabel: cluster
+          replacement: dev
   service:
     type: NodePort
     nodePort: 30301
 prometheus-node-exporter:
   enabled: true
   hostNetwork: true
+  prometheus:
+    monitor:
+      enabled: true
+      relabelings:
+        - targetLabel: cluster
+          replacement: dev
 prometheus-pushgateway:
   enabled: false

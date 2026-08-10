@@ -19,7 +19,7 @@ echo "==> [1] obs Prometheus config — cluster external_label + federate-dev jo
 kubectl get cm -n observability -l app.kubernetes.io/name=prometheus -o name 2>/dev/null | head -1 | xargs -r kubectl get -n observability -o yaml | grep -E "cluster:|federate-dev|DEV_PROMETHEUS" || echo "WARN: no prometheus CM or missing cluster/federation"
 
 echo ""
-echo "==> [2] obs Prometheus targets (federate-dev)"
+echo "==> [2] obs Prometheus targets"
 kubectl port-forward -n observability svc/prometheus-server 9090:80 >/tmp/pf-prom.log 2>&1 &
 PF_PID=$!
 sleep 2
@@ -27,8 +27,8 @@ curl -sf "http://127.0.0.1:9090/api/v1/targets" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 for t in d.get('data',{}).get('activeTargets',[]):
-    if 'dev' in t.get('labels',{}).get('job','') or 'federate' in t.get('labels',{}).get('job',''):
-        print(t['labels'].get('job'), t.get('health'), t.get('lastError',''))
+    lbl=t.get('labels',{})
+    print(lbl.get('job','?'), lbl.get('cluster','-'), t.get('health'), t.get('scrapeUrl',''), t.get('lastError','')[:80])
 " 2>/dev/null || echo "WARN: cannot query prometheus targets"
 echo ""
 echo "    cluster label values:"

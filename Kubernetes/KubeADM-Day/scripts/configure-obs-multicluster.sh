@@ -71,20 +71,26 @@ cat > /tmp/dev-extra-jobs.yaml <<EOF
       static_configs:
         - targets:
 $(cat "${NODE_TARGETS_FILE}")
-          labels:
-            cluster: dev
       relabel_configs:
+        - target_label: cluster
+          replacement: dev
         - target_label: job
           replacement: node-exporter
+      metric_relabel_configs:
+        - target_label: cluster
+          replacement: dev
     - job_name: dev-kube-state-metrics
       static_configs:
         - targets:
             - "${DEV_MASTER_IP}:${KSM_NODEPORT}"
-          labels:
-            cluster: dev
       relabel_configs:
+        - target_label: cluster
+          replacement: dev
         - target_label: job
           replacement: kube-state-metrics
+      metric_relabel_configs:
+        - target_label: cluster
+          replacement: dev
 EOF
 
 awk '
