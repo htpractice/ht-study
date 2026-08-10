@@ -67,6 +67,9 @@ kube-state-metrics:
       enabled: false
 prometheus-node-exporter:
   enabled: true
+  hostNetwork: true
+  tolerations:
+    - operator: Exists
   prometheus:
     monitor:
       enabled: false

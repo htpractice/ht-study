@@ -50,7 +50,8 @@ helm upgrade --install node-exporter prometheus-community/prometheus-node-export
   -n observability \
   --set prometheus.monitor.enabled=false \
   --set prometheus.podMonitor.enabled=false \
-  --set hostNetwork=true
+  --set hostNetwork=true \
+  --set 'tolerations[0].operator=Exists'
 
 kubectl wait -n observability --for=condition=available deployment/kube-state-metrics --timeout=300s || true
 

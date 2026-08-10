@@ -75,6 +75,13 @@ module "kubeadm_control_plane_sg" {
       description = "Kubelet API & Kubelet to Kubelet Communication"
       cidr_ipv4 = var.vpc_cidr
     }
+    "node-exporter-tcp" = {
+      from_port   = 9100
+      to_port     = 9100
+      ip_protocol = "tcp"
+      description = "Prometheus node-exporter scrape (cross-node)"
+      cidr_ipv4   = var.vpc_cidr
+    }
     "179-bgp-tcp" = {
       from_port   = 179
       to_port     = 179
@@ -124,6 +131,13 @@ module "kubeadm_worker_node_sg" {
       ip_protocol = "tcp"
       description = "Kubelet API & Kubelet to Kubelet Communication"
       cidr_ipv4 = var.vpc_cidr
+    }
+    "node-exporter-tcp" = {
+      from_port   = 9100
+      to_port     = 9100
+      ip_protocol = "tcp"
+      description = "Prometheus node-exporter scrape (cross-node)"
+      cidr_ipv4   = var.vpc_cidr
     }
     "30000-32767-tcp" = {
       from_port   = 30000
