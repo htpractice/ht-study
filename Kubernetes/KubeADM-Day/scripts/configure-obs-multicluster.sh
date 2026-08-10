@@ -6,7 +6,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 DEV_TARGET="${DEV_TARGET:-}"
 DEV_KUBECONFIG="${DEV_KUBECONFIG:-${HOME}/.kube/dev-config}"
 
@@ -48,7 +47,7 @@ for ip in "${DEV_NODE_IPS[@]}"; do
 done
 nc -vz -w 3 "${DEV_MASTER_IP}" "${KSM_NODEPORT}" </dev/null 2>&1 | tail -1 || echo "WARN: ${DEV_TARGET} blocked"
 
-BASE_VALUES="${REPO_ROOT}/Kubernetes/KubeADM-Day/manifests/obs/prometheus-values.yaml"
+BASE_VALUES="${SCRIPT_DIR}/../manifests/obs/prometheus-values.yaml"
 if [[ ! -f "${BASE_VALUES}" ]]; then
   echo "ERROR: ${BASE_VALUES} not found — git pull on obs-master" >&2
   exit 1
