@@ -77,6 +77,7 @@ values = {
         },
         "obs-node-exporter": {
             "enabled": True,
+            "job_name": "node-exporter",
             "kubernetes_sd_configs": [{"role": "node"}],
             "relabel_configs": [
                 {"source_labels": ["__address__"], "regex": "(.*):10250", "replacement": r"\${1}:9100", "target_label": "__address__"},
@@ -87,6 +88,7 @@ values = {
         },
         "dev-node-exporter": {
             "enabled": True,
+            "job_name": "node-exporter",
             "static_configs": [{"targets": dev_targets}],
             "relabel_configs": [
                 {"target_label": "cluster", "replacement": "dev"},
@@ -136,18 +138,25 @@ echo ""
 echo "==> Verify dev targets"
 if curl -sf http://127.0.0.1:9090/api/v1/targets >/tmp/targets.json 2>/dev/null; then
   python3 -c "
-import json
+import json, urllib.request
+
 d=json.load(open('/tmp/targets.json'))
-dev=[t for t in d['data']['activeTargets'] if 'dev' in t['labels'].get('job','')]
+dev=[t for t in d['data']['activeTargets']
+     if t['labels'].get('cluster')=='dev' or 'dev' in t['labels'].get('job','')]
 print(f'dev targets: {len(dev)}')
 for t in dev:
-    print(t['labels']['job'], t['health'], t['scrapeUrl'])
-clusters=json.load(__import__('urllib.request', fromlist=['urlopen']).urlopen('http://127.0.0.1:9090/api/v1/label/cluster/values').read())
+    print(t['labels'].get('job','?'), t['health'], t['scrapeUrl'])
+
+clusters=json.loads(urllib.request.urlopen('http://127.0.0.1:9090/api/v1/label/cluster/values').read())
 print('cluster labels:', clusters.get('data',[]))
-ne=json.load(__import__('urllib.request', fromlist=['urlopen']).urlopen('http://127.0.0.1:9090/api/v1/query?query=count%20by%20(cluster%2Cinstance)%20(up%7Bjob%3D%22node-exporter%22%7D)').read())
+
+ne=json.loads(urllib.request.urlopen(
+    'http://127.0.0.1:9090/api/v1/query?query=count%20by%20(cluster%2Cinstance)%20(up%7Bjob%3D%22node-exporter%22%7D)'
+).read())
 print('node-exporter up by cluster:')
 for r in ne.get('data',{}).get('result',[]):
-    print(' ', r.get('metric',{}), r.get('value',[])[1])
+    m=r.get('metric',{})
+    print(f\"  {m.get('cluster','?'):4s} {m.get('instance','?')} up={r.get('value',['',''])[1]}\")
 "
 else
   echo "Start port-forward: kubectl port-forward -n observability svc/prometheus-server 9090:80"
