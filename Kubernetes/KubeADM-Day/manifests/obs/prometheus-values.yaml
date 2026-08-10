@@ -1,7 +1,10 @@
 # obs cluster — Prometheus + Grafana (single Grafana for whole obs stack)
+# dotdc dashboards 15757/15760 need label `cluster` on metrics (external_labels + federation).
 server:
   global:
     scrape_interval: 15s
+    external_labels:
+      cluster: obs
   persistentVolume:
     enabled: false
   extraScrapeConfigs: |
@@ -32,6 +35,18 @@ server:
     - job_name: otel-collector
       static_configs:
         - targets: ["otel-collector.observability.svc.cluster.local:8889"]
+    # Federate dev cluster metrics (install-dev-metrics.sh on dev first).
+    # Set DEV_PROMETHEUS_TARGET to dev master private IP, e.g. 10.110.100.184:30300
+    - job_name: federate-dev
+      scrape_interval: 30s
+      honor_labels: true
+      metrics_path: /federate
+      params:
+        "match[]":
+          - '{job=~".+"}'
+      static_configs:
+        - targets:
+            - "DEV_PROMETHEUS_TARGET"
 
 alertmanager:
   enabled: false

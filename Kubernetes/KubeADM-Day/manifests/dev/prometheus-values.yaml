@@ -1,0 +1,23 @@
+# dev cluster — metrics for central Grafana on obs (federated into obs Prometheus)
+# Install: bash ~/install-dev-metrics.sh
+# Requires: obs VPC can reach NodePort 30300 (peering + dev SG from 10.210.0.0/16)
+
+server:
+  global:
+    scrape_interval: 15s
+    external_labels:
+      cluster: dev
+  persistentVolume:
+    enabled: false
+  service:
+    type: NodePort
+    nodePort: 30300
+
+alertmanager:
+  enabled: false
+kube-state-metrics:
+  enabled: true
+prometheus-node-exporter:
+  enabled: true
+prometheus-pushgateway:
+  enabled: false
