@@ -19,10 +19,7 @@ kube-state-metrics:
   enabled: true
   prometheus:
     monitor:
-      enabled: true
-      relabelings:
-        - targetLabel: cluster
-          replacement: dev
+      enabled: false
   service:
     type: NodePort
     nodePort: 30301
@@ -31,9 +28,6 @@ prometheus-node-exporter:
   hostNetwork: true
   prometheus:
     monitor:
-      enabled: true
-      relabelings:
-        - targetLabel: cluster
-          replacement: dev
+      enabled: false
 prometheus-pushgateway:
   enabled: false
