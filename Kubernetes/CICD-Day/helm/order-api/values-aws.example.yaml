@@ -1,0 +1,19 @@
+# Copy to values.yaml after terraform apply (or merge manually):
+#
+# image:
+#   repository: <account>.dkr.ecr.ap-south-1.amazonaws.com/order-api-lab
+#   tag: v1
+#
+# env:
+#   deploymentEnv: aws-lab
+
+image:
+  repository: REPLACE_WITH_ECR_REPOSITORY_URL
+  tag: v1
+  pullPolicy: Always
+
+service:
+  type: LoadBalancer
+
+env:
+  deploymentEnv: aws-lab

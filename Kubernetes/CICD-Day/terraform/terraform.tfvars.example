@@ -1,0 +1,4 @@
+aws_region        = "ap-south-1"
+cluster_name      = "cicd-day-eks"
+cluster_version   = "1.30"
+node_desired_size = 2

@@ -1,0 +1,33 @@
+# CI bumps image.tag via GitHub Actions — Argo CD syncs this chart
+replicaCount: 2
+
+image:
+  # AWS: set to terraform output ecr_repository_url after first apply
+  # kind/local: hthaware2508/order-api-lab
+  repository: hthaware2508/order-api-lab
+  tag: v1
+  pullPolicy: Always
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+
+env:
+  logLevel: INFO
+  port: "8080"
+  serviceVersion: v1
+  deploymentEnv: lab
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+prometheus:
+  scrape: true
+  port: "8080"
+  path: /metrics

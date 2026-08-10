@@ -1,11 +1,10 @@
 # Kubeadm EC2 infra — repo-root workflow (GitLab-style: .github/workflows at project root)
 #
-#   cka-2026-study push/merge  → plan, then apply dev (waits for approval)
-#   feature/* PR → cka-2026-study → plan only
+#   cka-2026-study push/merge  → plan + apply dev AND obs (each waits for env approval)
+#   feature/* PR → cka-2026-study → plan dev + obs only (no apply)
 #   workflow_dispatch → dev | prod | obs → plan, then apply (waits for approval)
 #
 # Configure repo Settings → Environments → dev / prod / obs → Required reviewers
-# so terraform-apply pauses until someone approves (GitLab manual-deploy equivalent).
 
 name: Kubeadm Terraform Multi-Env
 
@@ -42,13 +41,30 @@ permissions:
   issues: write
 
 jobs:
-  terraform-plan:
-    name: "Terraform Plan (${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'dev' }})"
+  env-matrix:
+    name: Resolve target environments
     runs-on: ubuntu-latest
     outputs:
-      tf_env: ${{ steps.env-vars.outputs.tf_env }}
-      tf_var_file: ${{ steps.env-vars.outputs.tf_var_file }}
-      working_directory: ${{ steps.env-vars.outputs.working_directory }}
+      tf_envs: ${{ steps.matrix.outputs.tf_envs }}
+    steps:
+      - id: matrix
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVS='["${{ github.event.inputs.environment }}"]'
+          else
+            # push + PR: dev + obs in parallel; prod stays manual-only
+            ENVS='["dev","obs"]'
+          fi
+          echo "tf_envs=${ENVS}" >> "$GITHUB_OUTPUT"
+
+  terraform-plan:
+    name: "Terraform Plan (${{ matrix.tf_env }})"
+    needs: env-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tf_env: ${{ fromJSON(needs.env-matrix.outputs.tf_envs) }}
     defaults:
       run:
         shell: bash
@@ -70,21 +86,11 @@ jobs:
           terraform_version: 1.13.3
           terraform_wrapper: false
 
-      - name: Set environment
-        id: env-vars
+      - name: Set working directory
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TF_ENV="${{ github.event.inputs.environment }}"
-          else
-            TF_ENV="dev"
-          fi
-
-          echo "tf_env=${TF_ENV}" >> "$GITHUB_OUTPUT"
-          echo "tf_var_file=${TF_ENV}.tfvars" >> "$GITHUB_OUTPUT"
-          echo "working_directory=${{ env.TF_ROOT_BASE }}/${TF_ENV}" >> "$GITHUB_OUTPUT"
-          echo "TF_ENV=${TF_ENV}" >> "$GITHUB_ENV"
-          echo "TF_VAR_FILE=${TF_ENV}.tfvars" >> "$GITHUB_ENV"
-          echo "WORKING_DIRECTORY=${{ env.TF_ROOT_BASE }}/${TF_ENV}" >> "$GITHUB_ENV"
+          echo "TF_ENV=${{ matrix.tf_env }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_FILE=${{ matrix.tf_env }}.tfvars" >> "$GITHUB_ENV"
+          echo "WORKING_DIRECTORY=${{ env.TF_ROOT_BASE }}/${{ matrix.tf_env }}" >> "$GITHUB_ENV"
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
@@ -156,7 +162,7 @@ jobs:
             } catch (e) {
               plan = String(e);
             }
-            const output = `#### Kubeadm Terraform Plan
+            const output = `#### Kubeadm Terraform Plan (${{ matrix.tf_env }})
 
             | Check | Result |
             |-------|--------|
@@ -164,7 +170,7 @@ jobs:
             | Init | \`${{ steps.init.outcome }}\` |
             | Validate | \`${{ steps.validate.outcome }}\` |
             | Plan | \`${{ steps.plan.outcome }}\` |
-            | Environment | \`${{ env.TF_ENV }}\` |
+            | Environment | \`${{ matrix.tf_env }}\` |
             | Directory | \`${{ env.WORKING_DIRECTORY }}\` |
 
             <details><summary>Show Plan</summary>
@@ -191,19 +197,23 @@ jobs:
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ env.TF_ENV }}
+          name: tfplan-${{ matrix.tf_env }}
           path: ${{ env.WORKING_DIRECTORY }}/tfplan
           if-no-files-found: error
 
   terraform-apply:
-    name: "Terraform Apply (${{ needs.terraform-plan.outputs.tf_env }})"
-    needs: terraform-plan
+    name: "Terraform Apply (${{ matrix.tf_env }})"
+    needs: [env-matrix, terraform-plan]
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref_name == 'cka-2026-study')
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tf_env: ${{ fromJSON(needs.env-matrix.outputs.tf_envs) }}
     environment:
-      name: ${{ needs.terraform-plan.outputs.tf_env }}
+      name: ${{ matrix.tf_env }}
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     defaults:
       run:
@@ -226,11 +236,11 @@ jobs:
           terraform_version: 1.13.3
           terraform_wrapper: false
 
-      - name: Restore env from plan job
+      - name: Restore env from matrix
         run: |
-          echo "TF_ENV=${{ needs.terraform-plan.outputs.tf_env }}" >> "$GITHUB_ENV"
-          echo "TF_VAR_FILE=${{ needs.terraform-plan.outputs.tf_var_file }}" >> "$GITHUB_ENV"
-          echo "WORKING_DIRECTORY=${{ needs.terraform-plan.outputs.working_directory }}" >> "$GITHUB_ENV"
+          echo "TF_ENV=${{ matrix.tf_env }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_FILE=${{ matrix.tf_env }}.tfvars" >> "$GITHUB_ENV"
+          echo "WORKING_DIRECTORY=${{ env.TF_ROOT_BASE }}/${{ matrix.tf_env }}" >> "$GITHUB_ENV"
 
       - name: Terraform Init
         working-directory: ${{ env.WORKING_DIRECTORY }}
@@ -239,7 +249,7 @@ jobs:
       - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ env.TF_ENV }}
+          name: tfplan-${{ matrix.tf_env }}
           path: ${{ env.WORKING_DIRECTORY }}
 
       - name: Terraform Apply

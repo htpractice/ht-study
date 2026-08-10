@@ -78,12 +78,44 @@ WORKER_SCRIPTS=(
 
 cd "${TF_DIR}"
 CP_IP="$(terraform output -raw control_plane_public_ip)"
-WORKER_JSON="$(terraform output -json worker_public_ips)"
 ENV="$(terraform output -raw environment 2>/dev/null || echo unknown)"
 ROLE="$(terraform output -raw cluster_role 2>/dev/null || echo unknown)"
 
+# worker_public_ips is a map (w1 → IP). Accept wrapped TF JSON or a plain IP list too.
+WORKER_LINES=()
+while IFS=$'\t' read -r name ip; do
+  [[ -n "${name}" && -n "${ip}" ]] && WORKER_LINES+=("${name}${'\t'}${ip}")
+done < <(
+  terraform output -json worker_public_ips | jq -r '
+    def unwrap:
+      if type == "object" and has("value") then .value else . end;
+    unwrap
+    | if type == "object" then
+        to_entries[]
+        | select(.value != null and (.value | type) == "string" and .value != "")
+        | "\(.key)\t\(.value)"
+      elif type == "array" then
+        to_entries[]
+        | select(.value != null and (.value | type) == "string" and .value != "")
+        | "w\(.key + 1)\t\(.value)"
+      else
+        empty
+      end
+  '
+)
+
+if [[ ${#WORKER_LINES[@]} -eq 0 ]]; then
+  echo "ERROR: No workers found in terraform output worker_public_ips." >&2
+  echo "       Check: terraform output -json worker_public_ips" >&2
+  exit 1
+fi
+
 echo "==> Environment: ${ENV} (${ROLE})"
 echo "==> Control plane: ${CP_IP}"
+echo "==> Workers (${#WORKER_LINES[@]}):"
+for line in "${WORKER_LINES[@]}"; do
+  echo "    ${line%%$'\t'*} → ${line#*$'\t'}"
+done
 
 copy_to() {
   local ip="$1"
@@ -102,16 +134,27 @@ done
 echo "==> Copy master scripts"
 copy_to "${CP_IP}" "${MASTER_PATHS[@]}"
 
+WORKER_PATHS=()
+for f in "${WORKER_SCRIPTS[@]}"; do
+  WORKER_PATHS+=("${SCRIPT_DIR}/${f}")
+done
+
 echo "==> Copy worker scripts"
-while read -r name ip; do
-  [[ -z "${name}" ]] && continue
-  WORKER_PATHS=()
-  for f in "${WORKER_SCRIPTS[@]}"; do
-    WORKER_PATHS+=("${SCRIPT_DIR}/${f}")
-  done
-  echo "  worker ${name}"
-  copy_to "${ip}" "${WORKER_PATHS[@]}"
-done < <(echo "${WORKER_JSON}" | jq -r 'to_entries[] | "\(.key) \(.value)"')
+FAILED=0
+for line in "${WORKER_LINES[@]}"; do
+  name="${line%%$'\t'*}"
+  ip="${line#*$'\t'}"
+  echo "  worker ${name} (${ip})"
+  if ! copy_to "${ip}" "${WORKER_PATHS[@]}"; then
+    echo "    ERROR: failed to copy to ${name} (${ip})" >&2
+    FAILED=$((FAILED + 1))
+  fi
+done
+
+if [[ ${FAILED} -gt 0 ]]; then
+  echo "ERROR: ${FAILED} worker(s) failed — fix SSH/SG and re-run." >&2
+  exit 1
+fi
 
 echo ""
 echo "==> Done. Next steps:"

@@ -1,0 +1,28 @@
+# Apply after Argo CD is installed: kubectl apply -f argocd/application-order-api.yaml
+#
+# Private repo: add repository credentials in Argo CD UI or via Secret
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: order-api
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/htpractice/ht-study.git
+    targetRevision: cka-2026-study
+    path: Kubernetes/CICD-Day/helm/order-api
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: order-api
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
