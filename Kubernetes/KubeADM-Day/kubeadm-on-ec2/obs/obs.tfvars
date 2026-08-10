@@ -1,6 +1,6 @@
-# Observability cluster — Prometheus, Grafana, Loki (Helm after bootstrap)
-# Apply: terraform apply -var-file=obs.tfvars
-# CD: Actions → Kubeadm Terraform Multi-Env → obs → approve
+# Observability cluster — Prometheus, Grafana (Helm after bootstrap)
+# CI: push to cka-2026-study under kubeadm-on-ec2/** → plan+apply dev+obs (approve obs gate)
+# Local: terraform apply -var-file=obs.tfvars
 
 environment   = "obs"
 cluster_role  = "obs"
