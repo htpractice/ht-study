@@ -41,25 +41,3 @@ prometheus-node-exporter:
   enabled: true
 prometheus-pushgateway:
   enabled: false
-
-grafana:
-  enabled: true
-  adminPassword: cka-lab
-  service:
-    type: ClusterIP
-  datasources:
-    datasources.yaml:
-      apiVersion: 1
-      datasources:
-        - name: Prometheus
-          type: prometheus
-          url: http://prometheus-server
-          isDefault: true
-        - name: Loki
-          type: loki
-          url: http://loki:3100
-          access: proxy
-        - name: Jaeger
-          type: jaeger
-          url: http://jaeger:16686
-          access: proxy

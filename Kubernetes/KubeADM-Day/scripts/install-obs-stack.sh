@@ -31,28 +31,34 @@ helm repo update
 echo "==> [2/7] Namespace observability"
 kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
 
-echo "==> [3/7] Prometheus + Grafana"
+echo "==> [3/8] Prometheus"
 helm upgrade --install prometheus prometheus-community/prometheus \
   -n observability \
   -f <(curl -fsSL "${OBS_VALUES}/prometheus-values.yaml")
 
-echo "==> [4/7] Loki + Promtail"
+echo "==> [4/8] Grafana (separate chart — prometheus chart no longer bundles it)"
+helm upgrade --install grafana grafana/grafana \
+  -n observability \
+  -f <(curl -fsSL "${OBS_VALUES}/grafana-values.yaml")
+
+echo "==> [5/8] Loki + Promtail"
 helm upgrade --install loki grafana/loki-stack \
   -n observability \
   -f <(curl -fsSL "${OBS_VALUES}/loki-stack-values.yaml")
 
-echo "==> [5/7] Jaeger + OpenTelemetry Collector"
+echo "==> [6/8] Jaeger + OpenTelemetry Collector"
 curl -fsSL "${LOGS_MANIFESTS}/jaeger.yaml" | kubectl apply -f -
 curl -fsSL "${LOGS_MANIFESTS}/otel-collector.yaml" | kubectl apply -f -
 
-echo "==> [6/7] Argo CD"
+echo "==> [7/8] Argo CD"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -n argocd --server-side -f \
   https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl wait -n argocd --for=condition=available deployment/argocd-server --timeout=600s
 
-echo "==> [7/7] Wait for core pods"
+echo "==> [8/8] Wait for core pods"
 kubectl wait -n observability --for=condition=available deployment/prometheus-server --timeout=600s || true
+kubectl wait -n observability --for=condition=available deployment/grafana --timeout=600s || true
 kubectl wait -n observability --for=condition=available deployment/jaeger --timeout=300s || true
 kubectl wait -n observability --for=condition=available deployment/otel-collector --timeout=300s || true
 
@@ -63,7 +69,7 @@ kubectl get pods -n observability
 kubectl get pods -n argocd
 echo ""
 echo "Grafana:  admin / cka-lab"
-echo "  kubectl port-forward -n observability svc/prometheus-grafana 3000:80"
+echo "  kubectl port-forward -n observability svc/grafana 3000:80"
 echo ""
 echo "Jaeger UI:"
 echo "  kubectl port-forward -n observability svc/jaeger 16686:16686"
