@@ -1,3 +1,13 @@
+output "ssh_private_key_secret_name" {
+  description = "AWS Secrets Manager secret holding the EC2 SSH private key"
+  value       = aws_secretsmanager_secret.ssh_private_key.name
+}
+
+output "ssh_private_key_fetch_command" {
+  description = "Run from laptop to materialize private_key.pem in this directory"
+  value       = "aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.ssh_private_key.name} --region ${var.aws_region} --query SecretString --output text > ${path.module}/private_key.pem && chmod 600 ${path.module}/private_key.pem"
+}
+
 output "environment" {
   description = "Environment name"
   value       = var.environment
@@ -66,12 +76,14 @@ output "ssh_workers" {
 
 locals {
   bootstrap_steps_common = <<-EOT
+    ssh-key: aws secretsmanager get-secret-value --secret-id kubeadm/${var.environment}/ssh-private-key --region ${var.aws_region} --query SecretString --output text > kubeadm-on-ec2/${var.environment}/private_key.pem && chmod 600 kubeadm-on-ec2/${var.environment}/private_key.pem
     m1: sudo bash ~/prep-node-master.sh
     workers: export JOIN_CMD='kubeadm join ...' && sudo -E bash ~/prep-node-worker.sh
     kubeconfig: ~/.kube/config-kubeadm-${var.environment}
   EOT
 
   bootstrap_steps_ci = <<-EOT
+    ssh-key: aws secretsmanager get-secret-value --secret-id kubeadm/${var.environment}/ssh-private-key --region ${var.aws_region} --query SecretString --output text > kubeadm-on-ec2/${var.environment}/private_key.pem && chmod 600 kubeadm-on-ec2/${var.environment}/private_key.pem
     scripts: Kubernetes/KubeADM-Day/scripts/copy-scripts-to-nodes.sh ${var.environment}
     m1: sudo bash ~/prep-node-master.sh
     workers: export JOIN_CMD='kubeadm join ...' && sudo -E bash ~/prep-node-worker.sh

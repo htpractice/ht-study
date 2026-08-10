@@ -40,6 +40,31 @@ TF_DIR="$(resolve_tf_dir "${1:-}")"
 KEY="${TF_DIR}/private_key.pem"
 SSH_OPTS=(-i "${KEY}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
 
+fetch_ssh_key_from_secrets_manager() {
+  local secret_name region
+  cd "${TF_DIR}"
+  secret_name="$(terraform output -raw ssh_private_key_secret_name 2>/dev/null || true)"
+  if [[ -z "${secret_name}" ]]; then
+    echo "ERROR: ${KEY} not found and no Secrets Manager output in ${TF_DIR}." >&2
+    echo "       Run terraform apply (dev) or fetch the key for prod/obs first." >&2
+    exit 1
+  fi
+  region="${AWS_REGION:-us-west-2}"
+  echo "==> Fetching SSH key from Secrets Manager: ${secret_name}"
+  aws secretsmanager get-secret-value \
+    --secret-id "${secret_name}" \
+    --region "${region}" \
+    --query SecretString \
+    --output text > "${KEY}"
+  chmod 600 "${KEY}"
+}
+
+if [[ ! -f "${KEY}" ]]; then
+  fetch_ssh_key_from_secrets_manager
+fi
+
+chmod 600 "${KEY}"
+
 MASTER_SCRIPTS=(
   prep-node-common.sh
   prep-node-master.sh
@@ -50,13 +75,6 @@ WORKER_SCRIPTS=(
   prep-node-worker.sh
   reset-node.sh
 )
-
-if [[ ! -f "${KEY}" ]]; then
-  echo "ERROR: ${KEY} not found. Run terraform apply in ${TF_DIR} first." >&2
-  exit 1
-fi
-
-chmod 600 "${KEY}"
 
 cd "${TF_DIR}"
 CP_IP="$(terraform output -raw control_plane_public_ip)"

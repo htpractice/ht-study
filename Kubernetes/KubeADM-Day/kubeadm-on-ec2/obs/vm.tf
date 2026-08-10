@@ -1,4 +1,4 @@
-# SSH key — Terraform generates; you SSH from laptop with private_key.pem
+# SSH key — Terraform generates; private key in AWS Secrets Manager (see secrets.tf).
 resource "tls_private_key" "instance_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -7,12 +7,6 @@ resource "tls_private_key" "instance_key" {
 resource "aws_key_pair" "generated_key" {
   key_name   = "${var.environment}-key"
   public_key = tls_private_key.instance_key.public_key_openssh
-}
-
-resource "local_file" "private_key_pem" {
-  content         = tls_private_key.instance_key.private_key_pem
-  filename        = "${path.module}/private_key.pem"
-  file_permission = "0600"
 }
 
 locals {
