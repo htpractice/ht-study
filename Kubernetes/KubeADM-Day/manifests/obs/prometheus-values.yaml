@@ -25,7 +25,7 @@ extraScrapeConfigs: |
       - target_label: cluster
         replacement: obs
       - target_label: job
-        replacement: obs-node-exporter
+        replacement: node-exporter
     metric_relabel_configs:
       - target_label: cluster
         replacement: obs

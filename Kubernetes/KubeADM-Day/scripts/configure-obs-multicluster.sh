@@ -81,7 +81,7 @@ values = {
             "relabel_configs": [
                 {"source_labels": ["__address__"], "regex": "(.*):10250", "replacement": r"\${1}:9100", "target_label": "__address__"},
                 {"target_label": "cluster", "replacement": "obs"},
-                {"target_label": "job", "replacement": "obs-node-exporter"},
+                {"target_label": "job", "replacement": "node-exporter"},
             ],
             "metric_relabel_configs": [{"target_label": "cluster", "replacement": "obs"}],
         },
@@ -90,7 +90,7 @@ values = {
             "static_configs": [{"targets": dev_targets}],
             "relabel_configs": [
                 {"target_label": "cluster", "replacement": "dev"},
-                {"target_label": "job", "replacement": "dev-node-exporter"},
+                {"target_label": "job", "replacement": "node-exporter"},
             ],
             "metric_relabel_configs": [{"target_label": "cluster", "replacement": "dev"}],
         },
@@ -142,8 +142,12 @@ dev=[t for t in d['data']['activeTargets'] if 'dev' in t['labels'].get('job','')
 print(f'dev targets: {len(dev)}')
 for t in dev:
     print(t['labels']['job'], t['health'], t['scrapeUrl'])
-clusters=__import__('urllib.request').urlopen('http://127.0.0.1:9090/api/v1/label/cluster/values').read()
-print('cluster labels:', json.loads(clusters).get('data',[]))
+clusters=json.load(__import__('urllib.request', fromlist=['urlopen']).urlopen('http://127.0.0.1:9090/api/v1/label/cluster/values').read())
+print('cluster labels:', clusters.get('data',[]))
+ne=json.load(__import__('urllib.request', fromlist=['urlopen']).urlopen('http://127.0.0.1:9090/api/v1/query?query=count%20by%20(cluster%2Cinstance)%20(up%7Bjob%3D%22node-exporter%22%7D)').read())
+print('node-exporter up by cluster:')
+for r in ne.get('data',{}).get('result',[]):
+    print(' ', r.get('metric',{}), r.get('value',[])[1])
 "
 else
   echo "Start port-forward: kubectl port-forward -n observability svc/prometheus-server 9090:80"

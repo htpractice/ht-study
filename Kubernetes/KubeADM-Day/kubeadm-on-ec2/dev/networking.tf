@@ -77,6 +77,27 @@ module "kubeadm_control_plane_sg" {
       description = "Kubelet API & Kubelet to Kubelet Communication"
       cidr_ipv4 = var.vpc_cidr
     }
+    "6443-tcp-from-obs" = {
+      from_port   = 6443
+      to_port     = 6443
+      ip_protocol = "tcp"
+      description = "Kubernetes API from obs (Argo CD cross-cluster)"
+      cidr_ipv4   = "10.210.0.0/16"
+    }
+    "node-exporter-from-obs" = {
+      from_port   = 9100
+      to_port     = 9100
+      ip_protocol = "tcp"
+      description = "node-exporter scrape from obs Prometheus"
+      cidr_ipv4   = "10.210.0.0/16"
+    }
+    "ksm-nodeport-from-obs" = {
+      from_port   = 30301
+      to_port     = 30301
+      ip_protocol = "tcp"
+      description = "kube-state-metrics NodePort from obs Prometheus"
+      cidr_ipv4   = "10.210.0.0/16"
+    }
     "179-bgp-tcp" = {
       from_port   = 179
       to_port     = 179
@@ -140,6 +161,20 @@ module "kubeadm_worker_node_sg" {
       ip_protocol = "udp"
       description = "NodePort"
       cidr_ipv4 = var.vpc_cidr
+    }
+    "node-exporter-from-obs" = {
+      from_port   = 9100
+      to_port     = 9100
+      ip_protocol = "tcp"
+      description = "node-exporter scrape from obs Prometheus"
+      cidr_ipv4   = "10.210.0.0/16"
+    }
+    "ksm-nodeport-from-obs" = {
+      from_port   = 30301
+      to_port     = 30301
+      ip_protocol = "tcp"
+      description = "kube-state-metrics NodePort from obs Prometheus"
+      cidr_ipv4   = "10.210.0.0/16"
     }
     "179-bgp-tcp" = {
       from_port   = 179

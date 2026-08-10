@@ -34,8 +34,14 @@ echo ""
 echo "    cluster label values:"
 curl -sf "http://127.0.0.1:9090/api/v1/label/cluster/values" 2>/dev/null | python3 -m json.tool || echo "WARN: no cluster label yet"
 echo ""
-echo "    kube_node_info count by cluster:"
-curl -sf "http://127.0.0.1:9090/api/v1/query?query=count%20by%20(cluster)%20(kube_node_info)" 2>/dev/null | python3 -m json.tool || true
+echo "    node-exporter up by cluster:"
+curl -sf "http://127.0.0.1:9090/api/v1/query?query=count%20by%20(cluster%2Cinstance)%20(up%7Bjob%3D%22node-exporter%22%7D)" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for r in d.get('data',{}).get('result',[]):
+    m=r.get('metric',{})
+    print(f\"  {m.get('cluster','?'):4s} {m.get('instance','?')} up={r.get('value',['',''])[1]}\")
+" || echo "WARN: no node-exporter metrics yet"
 kill "${PF_PID}" 2>/dev/null || true
 
 echo ""
