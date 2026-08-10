@@ -60,36 +60,36 @@ fi
 NODE_TARGETS_FILE="/tmp/dev-node-targets.yaml"
 : > "${NODE_TARGETS_FILE}"
 for ip in "${DEV_NODE_IPS[@]}"; do
-  printf '            - "%s:9100"\n' "${ip}" >> "${NODE_TARGETS_FILE}"
+  printf '          - "%s:9100"\n' "${ip}" >> "${NODE_TARGETS_FILE}"
 done
 
 cp "${BASE_VALUES}" /tmp/prometheus-obs-values.yaml
 
 cat > /tmp/dev-extra-jobs.yaml <<EOF
-    - job_name: dev-node-exporter
-      static_configs:
-        - targets:
+  - job_name: dev-node-exporter
+    static_configs:
+      - targets:
 $(cat "${NODE_TARGETS_FILE}")
-      relabel_configs:
-        - target_label: cluster
-          replacement: dev
-        - target_label: job
-          replacement: node-exporter
-      metric_relabel_configs:
-        - target_label: cluster
-          replacement: dev
-    - job_name: dev-kube-state-metrics
-      static_configs:
-        - targets:
-            - "${DEV_MASTER_IP}:${KSM_NODEPORT}"
-      relabel_configs:
-        - target_label: cluster
-          replacement: dev
-        - target_label: job
-          replacement: kube-state-metrics
-      metric_relabel_configs:
-        - target_label: cluster
-          replacement: dev
+    relabel_configs:
+      - target_label: cluster
+        replacement: dev
+      - target_label: job
+        replacement: dev-node-exporter
+    metric_relabel_configs:
+      - target_label: cluster
+        replacement: dev
+  - job_name: dev-kube-state-metrics
+    static_configs:
+      - targets:
+          - "${DEV_MASTER_IP}:${KSM_NODEPORT}"
+    relabel_configs:
+      - target_label: cluster
+        replacement: dev
+      - target_label: job
+        replacement: kube-state-metrics
+    metric_relabel_configs:
+      - target_label: cluster
+        replacement: dev
 EOF
 
 awk '
