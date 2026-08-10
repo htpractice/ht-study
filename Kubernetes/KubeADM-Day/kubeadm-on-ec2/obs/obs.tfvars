@@ -17,5 +17,5 @@ private_subnets = ["10.210.1.0/24", "10.210.4.0/24"]
 instance_type = "t3.small"
 ami           = "ami-02167eae61967e403"
 
-allow_ssh_from_cidr_blocks = ["172.225.137.213/32"]
-my_local_IP                = "172.225.137.213/32"
+allow_ssh_from_cidr_blocks = ["223.233.85.32/32"]
+my_local_IP                = "223.233.85.32/32"

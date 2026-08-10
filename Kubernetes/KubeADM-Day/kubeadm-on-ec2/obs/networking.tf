@@ -32,12 +32,7 @@ module "cicd-lab-vpc" {
   }
 }
 #--------------------Creating Security Groups--------------------
-# Fetch the self IP using a public API
-data "http" "self_ip" {
-  url = "http://ipv4.icanhazip.com"
-}
-
-#Kubeadm Control Plane Security Group
+# SSH CIDR from tfvars (never use data.http.self_ip — CI apply uses runner IP).
 module "kubeadm_control_plane_sg" {
   source = "terraform-aws-modules/security-group/aws"
   version = "6.0.0"
@@ -52,13 +47,20 @@ module "kubeadm_control_plane_sg" {
       description = "Kubernetes API server"
       cidr_ipv4 = var.vpc_cidr
     }
-    "SSH-from-self-IP"={
-        from_port   = 22
-        to_port     = 22
-        ip_protocol = "tcp"
-        description = "SSH from self IP"
-        cidr_ipv4 = "${chomp(data.http.self_ip.response_body)}/32" # This will be the ip of your lab-server
-      }
+    "SSH-from-laptop" = {
+      from_port   = 22
+      to_port     = 22
+      ip_protocol = "tcp"
+      description = "SSH from operator laptop"
+      cidr_ipv4   = var.allow_ssh_from_cidr_blocks[0]
+    }
+    "flannel-vxlan-udp" = {
+      from_port   = 8472
+      to_port     = 8472
+      ip_protocol = "udp"
+      description = "Flannel VXLAN — required for cross-node pod traffic"
+      cidr_ipv4   = var.vpc_cidr
+    }
     "2379-2380-tcp" = {
       from_port   = 2379
       to_port     = 2380
@@ -102,12 +104,19 @@ module "kubeadm_worker_node_sg" {
   description = "Security group for Kubeadm Worker Node"
   vpc_id      = module.cicd-lab-vpc.vpc_id
   ingress_rules = {
-    "SSH-from-self-IP"={
+    "SSH-from-laptop" = {
       from_port   = 22
       to_port     = 22
       ip_protocol = "tcp"
-      description = "SSH from self IP"
-      cidr_ipv4 = "${chomp(data.http.self_ip.response_body)}/32" # This will be the ip of your lab-server
+      description = "SSH from operator laptop"
+      cidr_ipv4   = var.allow_ssh_from_cidr_blocks[0]
+    }
+    "flannel-vxlan-udp" = {
+      from_port   = 8472
+      to_port     = 8472
+      ip_protocol = "udp"
+      description = "Flannel VXLAN — required for cross-node pod traffic"
+      cidr_ipv4   = var.vpc_cidr
     }
     "10250-tcp" = {
       from_port   = 10248
