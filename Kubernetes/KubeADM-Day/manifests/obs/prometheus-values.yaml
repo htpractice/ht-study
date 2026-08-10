@@ -6,6 +6,7 @@ server:
   persistentVolume:
     enabled: false
 
+# Dev scrape jobs appended by configure-obs-multicluster.sh into extraScrapeConfigs
 extraScrapeConfigs: |
   - job_name: obs-kube-state-metrics
     static_configs:
@@ -18,8 +19,8 @@ extraScrapeConfigs: |
       - role: node
     relabel_configs:
       - source_labels: [__address__]
-        regex: "(.*):10250"
-        replacement: "${1}:9100"
+        regex: '(.*):10250'
+        replacement: '${1}:9100'
         target_label: __address__
       - target_label: cluster
         replacement: obs
