@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create S3 backends for dev/prod Terraform state (us-west-2).
+# Create S3 backends for dev/prod/obs Terraform state (us-west-2).
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-west-2}"
@@ -29,5 +29,6 @@ create_state_bucket() {
 
 create_state_bucket "cka-2026-study-terraform-state-dev"
 create_state_bucket "cka-2026-study-terraform-state-prod"
+create_state_bucket "cka-2026-study-terraform-state-obs"
 
 echo "Done."

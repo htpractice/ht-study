@@ -4,6 +4,7 @@
 # Usage:
 #   ./copy-scripts-to-nodes.sh dev
 #   ./copy-scripts-to-nodes.sh prod
+#   ./copy-scripts-to-nodes.sh obs
 #   ./copy-scripts-to-nodes.sh /path/to/kubeadm-on-ec2/dev
 #
 # Master receives: prep-node-common.sh, prep-node-master.sh, reset-node.sh
@@ -22,11 +23,11 @@ KUBEADM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 resolve_tf_dir() {
   case "${1:-}" in
-    dev|prod)
+    dev|prod|obs)
       echo "${KUBEADM_ROOT}/kubeadm-on-ec2/${1}"
       ;;
     "")
-      echo "Usage: $0 dev|prod|/path/to/terraform/dir" >&2
+      echo "Usage: $0 dev|prod|obs|/path/to/terraform/dir" >&2
       exit 1
       ;;
     *)

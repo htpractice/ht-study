@@ -1,8 +1,8 @@
 # Kubeadm EC2 teardown — manual only (never triggered by push/PR)
 #
-#   Run workflow → choose dev | prod → type "destroy" → plan -destroy → destroy (waits for approval)
+#   Run workflow → choose dev | prod | obs → type "destroy" → plan -destroy → destroy (waits for approval)
 #
-# Configure repo Settings → Environments → dev / prod → Required reviewers
+# Configure repo Settings → Environments → dev / prod / obs → Required reviewers
 # (same gates as apply; destroy always requires workflow_dispatch + confirmation input)
 
 name: Kubeadm Terraform Destroy
@@ -17,6 +17,7 @@ on:
         options:
           - dev
           - prod
+          - obs
       confirm_destroy:
         description: 'Type "destroy" to confirm teardown'
         required: true

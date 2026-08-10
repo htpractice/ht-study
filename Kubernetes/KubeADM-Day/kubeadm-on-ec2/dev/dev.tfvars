@@ -1,7 +1,7 @@
 # order-api app cluster — dev
 # Apply: terraform apply -var-file=dev.tfvars
 # CD: push kubeadm-on-ec2/** on cka-2026-study → GHA plan + apply (dev approval)
-# Future: copy dev/ → tooling/ with cluster_role=tooling for Argo/Prometheus cluster
+# Observability stack: kubeadm-on-ec2/obs/ (cluster_role=obs)
 
 environment   = "dev"
 cluster_role  = "app"

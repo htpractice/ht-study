@@ -2,9 +2,9 @@
 #
 #   cka-2026-study push/merge  → plan, then apply dev (waits for approval)
 #   feature/* PR → cka-2026-study → plan only
-#   workflow_dispatch → dev | prod → plan, then apply (waits for approval)
+#   workflow_dispatch → dev | prod | obs → plan, then apply (waits for approval)
 #
-# Configure repo Settings → Environments → dev / prod → Required reviewers
+# Configure repo Settings → Environments → dev / prod / obs → Required reviewers
 # so terraform-apply pauses until someone approves (GitLab manual-deploy equivalent).
 
 name: Kubeadm Terraform Multi-Env
@@ -29,6 +29,7 @@ on:
         options:
           - dev
           - prod
+          - obs
 
 env:
   TF_LOG: INFO
