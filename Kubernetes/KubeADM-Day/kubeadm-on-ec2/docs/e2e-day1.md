@@ -1,6 +1,8 @@
 # Day 1 — kubeadm EC2: Flannel + GitOps + Upgrade + Monitoring
 
-> **Complete lab documentation (11-hour E2E build):** [e2e-lab-complete-runbook.md](e2e-lab-complete-runbook.md)
+> **Canonical lab setup spec:** [../docs/LAB-SPEC.md](../docs/LAB-SPEC.md)
+
+> **Complete lab documentation (11-hour E2E build):** [../docs/e2e-lab-complete-runbook.md](../docs/e2e-lab-complete-runbook.md)
 
 **Goal:** One lab covering K8s ops, GitOps, upgrade, observability for the 45-min interview round.  
 **Day 2:** [eks-day2.md](../../CICD-Day/docs/eks-day2.md) — full EKS + CI/CD.

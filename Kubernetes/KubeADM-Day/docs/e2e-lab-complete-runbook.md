@@ -1,5 +1,7 @@
 # E2E Kubeadm Lab — Complete Runbook (11-Hour Build)
 
+> **Setup spec (agents + users):** [LAB-SPEC.md](LAB-SPEC.md) — start here to reproduce the lab.
+
 **Branch:** `cka-2026-study` · **Repo:** [htpractice/ht-study](https://github.com/htpractice/ht-study)  
 **Completed:** August 10, 2026 · **Region:** `us-west-2` · **AWS Account:** `725335002991`
 
