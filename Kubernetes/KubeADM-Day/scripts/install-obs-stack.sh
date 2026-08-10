@@ -12,7 +12,14 @@ MANIFEST_BASE="${REPO_RAW}/Kubernetes"
 OBS_VALUES="${MANIFEST_BASE}/KubeADM-Day/manifests/obs"
 LOGS_MANIFESTS="${MANIFEST_BASE}/Logs%26Monitoring-Day/manifests"
 
-export KUBECONFIG="${KUBECONFIG:-/etc/kubernetes/admin.conf}"
+# Prefer ubuntu kubeconfig (kubeadm init); fall back to admin.conf when run as root.
+if [[ -z "${KUBECONFIG:-}" ]]; then
+  if [[ -f "${HOME}/.kube/config" ]]; then
+    export KUBECONFIG="${HOME}/.kube/config"
+  else
+    export KUBECONFIG="/etc/kubernetes/admin.conf"
+  fi
+fi
 
 if ! kubectl get nodes >/dev/null 2>&1; then
   echo "ERROR: kubectl cannot reach cluster. Run on obs master with admin kubeconfig." >&2

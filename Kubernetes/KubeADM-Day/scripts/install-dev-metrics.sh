@@ -10,7 +10,14 @@ set -euo pipefail
 REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/htpractice/ht-study/cka-2026-study}"
 VALUES_URL="${REPO_RAW}/Kubernetes/KubeADM-Day/manifests/dev/prometheus-values.yaml"
 
-export KUBECONFIG="${KUBECONFIG:-/etc/kubernetes/admin.conf}"
+# Prefer ubuntu kubeconfig (kubeadm init); fall back to admin.conf when run as root.
+if [[ -z "${KUBECONFIG:-}" ]]; then
+  if [[ -f "${HOME}/.kube/config" ]]; then
+    export KUBECONFIG="${HOME}/.kube/config"
+  else
+    export KUBECONFIG="/etc/kubernetes/admin.conf"
+  fi
+fi
 
 if ! kubectl get nodes >/dev/null 2>&1; then
   echo "ERROR: kubectl cannot reach dev cluster." >&2

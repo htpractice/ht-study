@@ -9,7 +9,14 @@ REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/htpractice/ht-study/cka-
 VALUES_URL="${REPO_RAW}/Kubernetes/KubeADM-Day/manifests/obs/prometheus-values.yaml"
 DEV_TARGET="${DEV_TARGET:-}"
 
-export KUBECONFIG="${KUBECONFIG:-/etc/kubernetes/admin.conf}"
+# Prefer ubuntu kubeconfig (kubeadm init); fall back to admin.conf when run as root.
+if [[ -z "${KUBECONFIG:-}" ]]; then
+  if [[ -f "${HOME}/.kube/config" ]]; then
+    export KUBECONFIG="${HOME}/.kube/config"
+  else
+    export KUBECONFIG="/etc/kubernetes/admin.conf"
+  fi
+fi
 
 if [[ -z "${DEV_TARGET}" ]]; then
   echo "ERROR: set DEV_TARGET to dev Prometheus NodePort, e.g. 10.110.100.184:30300" >&2
