@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# Prometheus + kube-state-metrics + node-exporter on dev for obs Grafana multi-cluster.
-# Run on dev master after nodes Ready:
-#   bash ~/install-dev-metrics.sh
+# kube-state-metrics + node-exporter on dev for obs Grafana multi-cluster.
+# obs Prometheus scrapes dev directly (9100 + 30301) — no Prometheus server on dev.
+# Run on dev master:
+#   bash Kubernetes/KubeADM-Day/scripts/install-dev-metrics.sh
 #
-# Prerequisite: dev worker/CP SG allows TCP 30300 from obs VPC (10.210.0.0/16).
+# Prerequisite: dev SG allows TCP 9100 + 30301 from obs VPC (10.210.0.0/16).
 
 set -euo pipefail
-
-REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/htpractice/ht-study/cka-2026-study}"
-VALUES_URL="${REPO_RAW}/Kubernetes/KubeADM-Day/manifests/dev/prometheus-values.yaml"
 
 # Prefer ubuntu kubeconfig (kubeadm init); fall back to admin.conf when run as root.
 if [[ -z "${KUBECONFIG:-}" ]]; then
@@ -34,19 +32,35 @@ helm repo update
 echo "==> Namespace observability"
 kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
 
-echo "==> Prometheus (cluster label=dev, NodePort 30300 for federation)"
-helm upgrade --install prometheus prometheus-community/prometheus \
-  -n observability \
-  -f <(curl -fsSL "${VALUES_URL}")
+if helm status prometheus -n observability >/dev/null 2>&1; then
+  echo "==> Removing old full Prometheus release on dev (replaced by ksm + node-exporter only)"
+  helm uninstall prometheus -n observability || true
+fi
 
-kubectl wait -n observability --for=condition=available deployment/prometheus-server --timeout=600s || true
+echo "==> kube-state-metrics (NodePort 30301, no ServiceMonitor)"
+helm upgrade --install kube-state-metrics prometheus-community/kube-state-metrics \
+  -n observability \
+  --set prometheus.monitor.enabled=false \
+  --set service.type=NodePort \
+  --set service.nodePort=30301 \
+  --set service.port=8080
+
+echo "==> node-exporter (hostNetwork :9100, no ServiceMonitor)"
+helm upgrade --install node-exporter prometheus-community/prometheus-node-exporter \
+  -n observability \
+  --set prometheus.monitor.enabled=false \
+  --set prometheus.podMonitor.enabled=false \
+  --set hostNetwork=true
+
+kubectl wait -n observability --for=condition=available deployment/kube-state-metrics --timeout=300s || true
 
 MASTER_IP="$(hostname -I | awk '{print $1}')"
 echo ""
-echo "==> dev metrics ready"
-echo "    Federation target for obs: ${MASTER_IP}:30300"
+echo "==> dev metrics ready (scraped by obs Prometheus)"
+echo "    kube-state-metrics: ${MASTER_IP}:30301"
+echo "    node-exporter:      <each-dev-node-ip>:9100"
 echo ""
-echo "On obs master, run:"
-echo "  DEV_TARGET=${MASTER_IP}:30300 bash ~/configure-obs-multicluster.sh"
+echo "On obs master:"
+echo "  DEV_TARGET=${MASTER_IP}:30301 bash Kubernetes/KubeADM-Day/scripts/configure-obs-multicluster.sh"
 echo ""
 kubectl get pods -n observability

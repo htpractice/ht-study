@@ -50,7 +50,7 @@ echo ""
 echo "==> [4] TCP from obs-master to dev Prometheus NodePort"
 if [[ -n "${DEV_TARGET}" ]]; then
   nc -vz -w 3 "${DEV_TARGET%%:*}" "${DEV_TARGET##*:}" || echo "FAIL: cannot reach ${DEV_TARGET} — add dev SG TCP ${DEV_TARGET##*:} from 10.210.0.0/16"
-  curl -sf --max-time 5 "http://${DEV_TARGET}/-/ready" && echo "OK: dev prometheus ready" || echo "FAIL: dev prometheus not ready at http://${DEV_TARGET}"
+  curl -sf --max-time 5 "http://${DEV_TARGET}/metrics" | head -1 && echo "OK: dev kube-state-metrics reachable at http://${DEV_TARGET}/metrics" || echo "FAIL: cannot scrape http://${DEV_TARGET}/metrics"
 else
   echo "Set DEV_TARGET=10.110.x.x:30300 to test dev Prometheus reachability"
 fi

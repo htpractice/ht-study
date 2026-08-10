@@ -57,19 +57,6 @@ server:
       metric_relabel_configs:
         - target_label: cluster
           replacement: obs
-    - job_name: federate-dev
-      scrape_interval: 30s
-      honor_labels: true
-      metrics_path: /federate
-      params:
-        "match[]":
-          - '{job=~".+"}'
-      static_configs:
-        - targets:
-            - "DEV_PROMETHEUS_TARGET"
-      metric_relabel_configs:
-        - target_label: cluster
-          replacement: dev
 
 alertmanager:
   enabled: false
