@@ -130,12 +130,11 @@ print("Wrote /tmp/prometheus-obs-values.yaml")
 PY
 
 echo "==> Validating YAML"
-python3 -c "
-import yaml
-from pathlib import Path
-yaml.safe_load(Path('/tmp/prometheus-obs-values.yaml').read_text())
-print('YAML OK')
-" || { echo "WARN: install python3-yaml or inspect /tmp/prometheus-obs-values.yaml"; exit 1; }
+if python3 -c "import yaml" 2>/dev/null; then
+  python3 -c "import yaml; from pathlib import Path; yaml.safe_load(Path('/tmp/prometheus-obs-values.yaml').read_text()); print('YAML OK')"
+else
+  echo "SKIP: python3-yaml not installed — helm will validate"
+fi
 
 echo "==> Upgrading obs Prometheus"
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
