@@ -21,6 +21,12 @@ spec:
         prometheus.io/path: {{ .Values.prometheus.path | quote }}
       {{- end }}
     spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: order-api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

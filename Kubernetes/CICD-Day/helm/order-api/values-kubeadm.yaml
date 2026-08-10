@@ -1,10 +1,12 @@
 # kubeadm EC2 lab — no cloud LoadBalancer; NodePort for curl from worker IP
-replicaCount: 2
+replicaCount: 3
 
 image:
   repository: hthaware2508/order-api-lab
   tag: v1
   pullPolicy: Always
+  pullSecrets:
+    - dockerhub-creds
 
 service:
   type: NodePort

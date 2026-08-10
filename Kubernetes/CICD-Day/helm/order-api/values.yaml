@@ -7,6 +7,8 @@ image:
   repository: hthaware2508/order-api-lab
   tag: v1
   pullPolicy: Always
+  # Private Docker Hub / ECR: create secret in namespace, set name here
+  pullSecrets: []
 
 service:
   type: LoadBalancer
