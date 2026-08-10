@@ -89,6 +89,13 @@ module "kubeadm_control_plane_sg" {
       description = "OTLP from dev order-api to obs otel-collector NodePort"
       cidr_ipv4   = "10.110.0.0/16"
     }
+    "loki-push-from-dev" = {
+      from_port   = 30100
+      to_port     = 30100
+      ip_protocol = "tcp"
+      description = "Loki push from dev Promtail"
+      cidr_ipv4   = "10.110.0.0/16"
+    }
     "179-bgp-tcp" = {
       from_port   = 179
       to_port     = 179

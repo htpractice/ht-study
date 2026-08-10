@@ -1,4 +1,5 @@
-# obs cluster — Loki + Promtail only (Grafana comes from prometheus chart)
+# obs cluster — Loki + Promtail only (Grafana from grafana chart).
+# Dev order-api logs: install-dev-promtail.sh pushes to Loki NodePort 30100.
 grafana:
   enabled: false
 
@@ -7,9 +8,15 @@ promtail:
   config:
     clients:
       - url: http://{{ .Release.Name }}:3100/loki/api/v1/push
+        external_labels:
+          cluster: obs
 
 loki:
   enabled: true
   isDefault: false
   persistence:
     enabled: false
+  service:
+    type: NodePort
+    port: 3100
+    nodePort: 30100
