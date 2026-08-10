@@ -17,7 +17,11 @@ alertmanager:
   enabled: false
 kube-state-metrics:
   enabled: true
+  service:
+    type: NodePort
+    nodePort: 30301
 prometheus-node-exporter:
   enabled: true
+  hostNetwork: true
 prometheus-pushgateway:
   enabled: false
