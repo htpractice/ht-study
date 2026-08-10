@@ -10,9 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=prep-node-common.sh
 source "${SCRIPT_DIR}/prep-node-common.sh"
 
-POD_NETWORK_CIDR="${POD_NETWORK_CIDR:-10.244.0.0/16}"
-K8S_PATCH="${K8S_PATCH:-v1.35.7}"
-PRIVATE_IP="${APISERVER_ADVERTISE_ADDRESS:-$(hostname -I | awk '{print $1}')}"
+export POD_NETWORK_CIDR="${POD_NETWORK_CIDR:-10.244.0.0/16}"
+export K8S_PATCH="${K8S_PATCH:-v1.35.7}"
+export PRIVATE_IP="${APISERVER_ADVERTISE_ADDRESS:-$(hostname -I | awk '{print $1}')}"
 
 echo "==> [master] kubeadm init (apiserver ${PRIVATE_IP}, pod CIDR ${POD_NETWORK_CIDR})"
 kubeadm init \

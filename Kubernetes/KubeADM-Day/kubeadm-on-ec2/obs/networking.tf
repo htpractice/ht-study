@@ -96,6 +96,13 @@ module "kubeadm_control_plane_sg" {
       description = "Loki push from dev Promtail"
       cidr_ipv4   = "10.110.0.0/16"
     }
+    "dev-nodeport-services" = {
+      from_port   = 30000
+      to_port     = 35000
+      ip_protocol = "tcp"
+      description = "NodePort services from dev (OTEL, Loki — matches live console rule)"
+      cidr_ipv4   = "10.110.0.0/16"
+    }
     "179-bgp-tcp" = {
       from_port   = 179
       to_port     = 179
@@ -165,6 +172,13 @@ module "kubeadm_worker_node_sg" {
       to_port     = 30100
       ip_protocol = "tcp"
       description = "Loki push from dev Promtail"
+      cidr_ipv4   = "10.110.0.0/16"
+    }
+    "dev-nodeport-services" = {
+      from_port   = 30000
+      to_port     = 35000
+      ip_protocol = "tcp"
+      description = "NodePort services from dev (OTEL, Loki — matches live console rule)"
       cidr_ipv4   = "10.110.0.0/16"
     }
     "30000-32767-tcp" = {

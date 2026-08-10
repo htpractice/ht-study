@@ -98,6 +98,13 @@ module "kubeadm_control_plane_sg" {
       description = "kube-state-metrics NodePort from obs Prometheus"
       cidr_ipv4   = "10.210.0.0/16"
     }
+    "prometheus-nodeport-from-obs" = {
+      from_port   = 30300
+      to_port     = 30400
+      ip_protocol = "tcp"
+      description = "Prometheus/KSM NodePort range from obs (matches live console rule)"
+      cidr_ipv4   = "10.210.0.0/16"
+    }
     "179-bgp-tcp" = {
       from_port   = 179
       to_port     = 179
@@ -174,6 +181,13 @@ module "kubeadm_worker_node_sg" {
       to_port     = 30301
       ip_protocol = "tcp"
       description = "kube-state-metrics NodePort from obs Prometheus"
+      cidr_ipv4   = "10.210.0.0/16"
+    }
+    "prometheus-nodeport-from-obs" = {
+      from_port   = 30300
+      to_port     = 30400
+      ip_protocol = "tcp"
+      description = "Prometheus/KSM NodePort range from obs (matches live console rule)"
       cidr_ipv4   = "10.210.0.0/16"
     }
     "179-bgp-tcp" = {
