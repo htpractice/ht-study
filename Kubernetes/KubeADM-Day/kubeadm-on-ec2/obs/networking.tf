@@ -82,6 +82,13 @@ module "kubeadm_control_plane_sg" {
       description = "Prometheus node-exporter scrape (cross-node)"
       cidr_ipv4   = var.vpc_cidr
     }
+    "otel-otlp-from-dev" = {
+      from_port   = 30317
+      to_port     = 30317
+      ip_protocol = "tcp"
+      description = "OTLP from dev order-api to obs otel-collector NodePort"
+      cidr_ipv4   = "10.110.0.0/16"
+    }
     "179-bgp-tcp" = {
       from_port   = 179
       to_port     = 179
@@ -138,6 +145,13 @@ module "kubeadm_worker_node_sg" {
       ip_protocol = "tcp"
       description = "Prometheus node-exporter scrape (cross-node)"
       cidr_ipv4   = var.vpc_cidr
+    }
+    "otel-otlp-from-dev" = {
+      from_port   = 30317
+      to_port     = 30317
+      ip_protocol = "tcp"
+      description = "OTLP from dev order-api to obs otel-collector NodePort"
+      cidr_ipv4   = "10.110.0.0/16"
     }
     "30000-32767-tcp" = {
       from_port   = 30000

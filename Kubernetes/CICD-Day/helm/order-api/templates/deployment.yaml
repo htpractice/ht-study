@@ -43,6 +43,16 @@ spec:
               value: {{ .Values.env.serviceVersion | quote }}
             - name: DEPLOYMENT_ENV
               value: {{ .Values.env.deploymentEnv | quote }}
+            {{- if .Values.otel.enabled }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.otel.serviceName | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.exporterOtlpEndpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: {{ .Values.otel.protocol | quote }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ printf "service.version=%s,deployment.environment=%s" .Values.env.serviceVersion .Values.env.deploymentEnv | quote }}
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /health

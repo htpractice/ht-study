@@ -33,3 +33,10 @@ prometheus:
   scrape: true
   port: "8080"
   path: /metrics
+
+# In-cluster (kind/EKS): point at local collector. Kubeadm dev→obs: use values-kubeadm.yaml.
+otel:
+  enabled: false
+  serviceName: order-api
+  exporterOtlpEndpoint: http://otel-collector.observability.svc.cluster.local:4317
+  protocol: grpc

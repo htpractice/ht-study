@@ -32,3 +32,11 @@ prometheus:
   scrape: true
   port: "8080"
   path: /metrics
+
+# Traces: dev order-api → obs OTel collector (NodePort 30317) over peered VPC.
+# Set exporterOtlpEndpoint to obs-master01 private IP if different.
+otel:
+  enabled: true
+  serviceName: order-api
+  exporterOtlpEndpoint: http://10.210.100.57:30317
+  protocol: grpc

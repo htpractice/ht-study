@@ -1,6 +1,7 @@
 # OpenTelemetry Collector — receives OTLP from order-api, exports traces to Jaeger + metrics for Prometheus
 #
 # Apply: kubectl apply -f manifests/otel-collector.yaml
+# Cross-cluster (dev order-api → obs): NodePort 30317 on obs master private IP
 # Verify: kubectl get pods -n observability -l app=otel-collector
 ---
 apiVersion: v1
@@ -56,12 +57,14 @@ metadata:
   labels:
     app: otel-collector
 spec:
+  type: NodePort
   selector:
     app: otel-collector
   ports:
     - name: otlp-grpc
       port: 4317
       targetPort: 4317
+      nodePort: 30317
     - name: otlp-http
       port: 4318
       targetPort: 4318
