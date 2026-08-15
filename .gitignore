@@ -1,6 +1,22 @@
 # Work-related local notes — not part of CKA study track
 Kubernetes/AEP-local-to-k8s/
 
+# Interview prep — local only
+interview-prep/
+
+# OS / Python artifacts
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.log
+**/venv/
+**/revist/
+
+# Kubeconfig / cluster credentials — never commit
+**/my-cluster-config
+**/*kubeconfig*
+
 # Private keys and locally generated CSRs/certs — never commit
 **/*.key
 **/*.csr

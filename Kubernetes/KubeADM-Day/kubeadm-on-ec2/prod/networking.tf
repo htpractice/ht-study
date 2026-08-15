@@ -60,7 +60,7 @@ module "kubeadm_control_plane_sg" {
       from_port   = 8472
       to_port     = 8472
       ip_protocol = "udp"
-      description = "Flannel VXLAN — required for cross-node pod traffic"
+      description = "Flannel VXLAN - required for cross-node pod traffic"
       cidr_ipv4   = var.vpc_cidr
     }
     "2379-2380-tcp" = {
@@ -117,7 +117,7 @@ module "kubeadm_worker_node_sg" {
       from_port   = 8472
       to_port     = 8472
       ip_protocol = "udp"
-      description = "Flannel VXLAN — required for cross-node pod traffic"
+      description = "Flannel VXLAN - required for cross-node pod traffic"
       cidr_ipv4   = var.vpc_cidr
     }
     "10250-tcp" = {

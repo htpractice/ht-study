@@ -1,0 +1,82 @@
+    1  ls
+    2* 
+    3  vim script.sh
+    4  sudo bash script.sh 
+    5  sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --node-name master
+    6  mkdir -p $HOME/.kube
+    7  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    8  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    9  sudo su -
+   10  cat ~/.kube/config 
+   11  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+   12  kubectl get pods -A
+   13  kubectl get no
+   14  kubectl scale deployment upgrade-test --replicas=2
+   15  kubectl drain w01 --ignore-daemonsets --delete-emptydir-data
+   16  vim upgrade.sh
+   17  bash upgrade.sh 
+   18  kubeadm vesrion
+   19  kubeadm version
+   20  kubectl version
+   21  kubelet --version
+   22  apt-cache madison kubeadm | grep 1.36
+   23  apt-cache madison kubelet | grep 1.36
+   24  apt-cache madison kubectl | grep 1.36
+   25  vim upgrade.sh
+   26  bash upgrade.sh 
+   27  kubectl get no
+   28  kubectl  drain w01 --ignore-daemonsets --delete-emptydir-data
+   29  vim upgrade.sh 
+   30  ssh 10.110.104.26
+   31  kubectl drain w02 --ignore-daemonsets --delete-emptydir-data
+   32  cat upgrade.sh 
+   33  kubectl drain w03 --ignore-daemonsets --delete-emptydir-data
+   34  kubectl get no -w
+   35  lubectl get po -w
+   36  kubectl get po -w
+   37  clear
+   38  kubectl create namespace team-a
+   39  cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-a-quota
+  namespace: team-a
+spec:
+  hard:
+    pods: "4"
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "4"
+    limits.memory: 4Gi
+EOF
+
+   40  kubectl describe quota -n team-a
+   41  kubectl create deployment busy -n team-a --image=nginx --replicas=5
+   42  kubectl get po -n team-a
+   43  kubectl get po -A
+   44  kubectl events | tail -n 15
+   45  kubectl create deployment busy -n team-a --image=nginx --replicas=5
+   46  kubectl get deployments -A
+   47  kubectl get deploy -n team-a
+   48  kubectl describe deploy busy
+   49  kubectl describe deploy busy -n team-a
+   50  kubectl logs 
+   51  kubectl get rs -l
+   52  kubectl get rs -n team-a
+   53  kubcetl describe rs busy-796bfb6f4c -n team-a
+   54  kubctl describe rs busy-796bfb6f4c -n team-a
+   55  kubectl describe rs busy-796bfb6f4c -n team-a
+   56  kubectl delete deployment busy -n team-a --ignore-not-found
+   57  kubectl create deployment busy -n team-a --image=nginx --replicas=5
+   58  kubectl get deploy -n team-a
+   59  kubectl get -A -n team-a
+   60  kubectl get po,deploy,rs -n team-a
+   61  kubectl get po,deploy,rs,rq,lr -n team-a
+   62  kubectl get po,deploy,rs,lr -n team-a
+   63  kubectl get po,deploy,rs -n team-a
+   64  kubectl get limitrage
+   65  kubectl get limitRange
+   66  kubectl get limitRange -n team-a
+   67  kubectl describe limitRange -n team-a
+   68  history > upgrage_lab.txt

@@ -32,7 +32,10 @@ module "cicd-lab-vpc" {
   }
 }
 #--------------------Creating Security Groups--------------------
-# SSH CIDR from tfvars (never use data.http.self_ip — CI apply uses runner IP).
+# Fetch the self IP using a public API
+data "http" "self_ip" {
+  url = "http://ipv4.icanhazip.com"
+}
 
 #Kubeadm Control Plane Security Group
 module "kubeadm_control_plane_sg" {
@@ -49,20 +52,13 @@ module "kubeadm_control_plane_sg" {
       description = "Kubernetes API server"
       cidr_ipv4 = var.vpc_cidr
     }
-    "SSH-from-laptop" = {
-      from_port   = 22
-      to_port     = 22
-      ip_protocol = "tcp"
-      description = "SSH from operator laptop"
-      cidr_ipv4   = var.allow_ssh_from_cidr_blocks[0]
-    }
-    "flannel-vxlan-udp" = {
-      from_port   = 8472
-      to_port     = 8472
-      ip_protocol = "udp"
-      description = "Flannel VXLAN - required for cross-node pod traffic"
-      cidr_ipv4   = var.vpc_cidr
-    }
+    "SSH-from-self-IP"={
+        from_port   = 22
+        to_port     = 22
+        ip_protocol = "tcp"
+        description = "SSH from self IP"
+        cidr_ipv4 = "${chomp(data.http.self_ip.response_body)}/32" # This will be the ip of your lab-server
+      }
     "2379-2380-tcp" = {
       from_port   = 2379
       to_port     = 2380
@@ -76,34 +72,6 @@ module "kubeadm_control_plane_sg" {
       ip_protocol = "tcp"
       description = "Kubelet API & Kubelet to Kubelet Communication"
       cidr_ipv4 = var.vpc_cidr
-    }
-    "6443-tcp-from-obs" = {
-      from_port   = 6443
-      to_port     = 6443
-      ip_protocol = "tcp"
-      description = "Kubernetes API from obs (Argo CD cross-cluster)"
-      cidr_ipv4   = "10.210.0.0/16"
-    }
-    "node-exporter-from-obs" = {
-      from_port   = 9100
-      to_port     = 9100
-      ip_protocol = "tcp"
-      description = "node-exporter scrape from obs Prometheus"
-      cidr_ipv4   = "10.210.0.0/16"
-    }
-    "ksm-nodeport-from-obs" = {
-      from_port   = 30301
-      to_port     = 30301
-      ip_protocol = "tcp"
-      description = "kube-state-metrics NodePort from obs Prometheus"
-      cidr_ipv4   = "10.210.0.0/16"
-    }
-    "prometheus-nodeport-from-obs" = {
-      from_port   = 30300
-      to_port     = 30400
-      ip_protocol = "tcp"
-      description = "Prometheus/KSM NodePort range from obs (matches live console rule)"
-      cidr_ipv4   = "10.210.0.0/16"
     }
     "179-bgp-tcp" = {
       from_port   = 179
@@ -134,19 +102,12 @@ module "kubeadm_worker_node_sg" {
   description = "Security group for Kubeadm Worker Node"
   vpc_id      = module.cicd-lab-vpc.vpc_id
   ingress_rules = {
-    "SSH-from-laptop" = {
+    "SSH-from-self-IP"={
       from_port   = 22
       to_port     = 22
       ip_protocol = "tcp"
-      description = "SSH from operator laptop"
-      cidr_ipv4   = var.allow_ssh_from_cidr_blocks[0]
-    }
-    "flannel-vxlan-udp" = {
-      from_port   = 8472
-      to_port     = 8472
-      ip_protocol = "udp"
-      description = "Flannel VXLAN - required for cross-node pod traffic"
-      cidr_ipv4   = var.vpc_cidr
+      description = "SSH from self IP"
+      cidr_ipv4 = "${chomp(data.http.self_ip.response_body)}/32" # This will be the ip of your lab-server
     }
     "10250-tcp" = {
       from_port   = 10248
@@ -168,27 +129,6 @@ module "kubeadm_worker_node_sg" {
       ip_protocol = "udp"
       description = "NodePort"
       cidr_ipv4 = var.vpc_cidr
-    }
-    "node-exporter-from-obs" = {
-      from_port   = 9100
-      to_port     = 9100
-      ip_protocol = "tcp"
-      description = "node-exporter scrape from obs Prometheus"
-      cidr_ipv4   = "10.210.0.0/16"
-    }
-    "ksm-nodeport-from-obs" = {
-      from_port   = 30301
-      to_port     = 30301
-      ip_protocol = "tcp"
-      description = "kube-state-metrics NodePort from obs Prometheus"
-      cidr_ipv4   = "10.210.0.0/16"
-    }
-    "prometheus-nodeport-from-obs" = {
-      from_port   = 30300
-      to_port     = 30400
-      ip_protocol = "tcp"
-      description = "Prometheus/KSM NodePort range from obs (matches live console rule)"
-      cidr_ipv4   = "10.210.0.0/16"
     }
     "179-bgp-tcp" = {
       from_port   = 179

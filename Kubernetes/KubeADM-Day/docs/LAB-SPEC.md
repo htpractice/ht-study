@@ -1,364 +1,257 @@
-# LAB-SPEC — Kubeadm E2E (dev + obs)
+# Kubeadm E2E Lab — Canonical Spec
 
-**Canonical specification** to reproduce the CrowdStrike-style platform lab:  
-Terraform → kubeadm → Argo GitOps → cross-cluster Prometheus/Grafana/Loki/Jaeger.
+**Purpose:** Single source of truth for AI agents and operators to **reproduce** or **guide setup** of the dev+obs kubeadm lab on AWS.
 
 **Branch:** `cka-2026-study` · **Repo:** `htpractice/ht-study`  
-**Use this file first** when setting up the lab or guiding a user.  
-**Troubleshooting depth:** [security-groups-runbook.md](security-groups-runbook.md) · [observability-yaml-runbook.md](observability-yaml-runbook.md) · [e2e-lab-complete-runbook.md](e2e-lab-complete-runbook.md)
+**Region:** `us-west-2` · **K8s:** v1.35.7 · **CNI:** Flannel (`10.244.0.0/16`)
+
+**Deep references (do not duplicate — link out):**
+- [security-groups-runbook.md](security-groups-runbook.md) — all SG rules, console vs Terraform
+- [observability-yaml-runbook.md](observability-yaml-runbook.md) — Prometheus/Grafana/Loki/Jaeger Helm traps
+- [e2e-lab-complete-runbook.md](e2e-lab-complete-runbook.md) — narrative, AWS snapshot, troubleshooting table
 
 ---
 
-## For agents (Cursor / automation)
+## 1. Target architecture
 
-When asked to **set up**, **restore**, or **guide** this lab:
-
-1. Read this entire spec before running commands.
-2. Execute phases **in order** — do not skip peering/SG before observability.
-3. After each phase, run the **gate** commands; if a gate fails, consult the linked runbook section before proceeding.
-4. Replace all `<PLACEHOLDERS>` from Terraform outputs or user-provided IPs.
-5. Never `kubectl apply` order-api to dev directly if Argo `selfHeal: true` — change git + sync.
-6. Cross-cluster always uses **obs master private IP** + **NodePort** (not in-cluster DNS across VPCs).
-7. Prometheus multicluster: always use `configure-obs-multicluster.sh` (scrapeConfigs map), not manual federation.
-
----
-
-## Constants
-
-| Key | Value |
-|-----|-------|
-| Region | `us-west-2` |
-| dev VPC CIDR | `10.110.0.0/16` |
-| obs VPC CIDR | `10.210.0.0/16` |
-| Pod CIDR (both clusters) | `10.244.0.0/16` (Flannel) |
-| K8s version | `v1.35.7` / package `1.35.7-1.1` |
-| dev master hostname | `dev-k8s-m1` |
-| obs master hostname | `obs-k8s-m1` |
-| Git branch | `cka-2026-study` |
-
-### NodePorts & ports (cross-VPC)
-
-| Port | Direction | Service |
-|------|-----------|---------|
-| 6443 | obs → dev CP | Argo CD → dev API |
-| 9100 | obs → dev nodes | node-exporter scrape |
-| 30301 | obs → dev master | kube-state-metrics |
-| 30317 | dev → obs | OTel OTLP gRPC |
-| 30100 | dev → obs | Loki push |
-| 30080 | external → dev | order-api HTTP |
-| 8472/UDP | within each VPC `/16` | Flannel VXLAN |
-
-### Placeholders (fill after Terraform / bootstrap)
-
-```bash
-DEV_MASTER_PRIVATE=<e.g. 10.110.100.184>
-OBS_MASTER_PRIVATE=<e.g. 10.210.100.57>
-DEV_MASTER_PUBLIC=<terraform output>
-OBS_MASTER_PUBLIC=<terraform output>
-PEERING_ID=<pcx-xxxxxxxx>
+```
+dev VPC 10.110.0.0/16          obs VPC 10.210.0.0/16
+├── 1 CP + 3 workers           ├── 1 CP + 3 workers
+├── order-api (Argo target)    ├── Argo CD (control plane)
+├── KSM :30301 + node-exp :9100├── Prometheus + Grafana
+├── Promtail → obs Loki        ├── Loki :30100 + Jaeger + OTel :30317
+└── OTEL → obs :30317          └── scrapes dev metrics over peering
+         └──── VPC peering pcx (manual) + routes on all RTs ────┘
 ```
 
----
+| Cluster | Role | Key IPs (lab instance) |
+|---------|------|------------------------|
+| dev | app | master `10.110.100.184`, workers `.179/.224/.30` |
+| obs | observability + GitOps | master `10.210.100.57` |
 
-## Prerequisites
-
-- [ ] AWS account + credentials (`infra-user` or equivalent)
-- [ ] GitHub repo access; branch `cka-2026-study`
-- [ ] GitHub secrets for GHA: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-- [ ] GitHub Environments with approval: `dev`, `obs`
-- [ ] Operator laptop IP in `dev.tfvars` / `obs.tfvars` → `allow_ssh_from_cidr_blocks`
-- [ ] Docker Hub creds for private pull (or public image)
-- [ ] S3 state buckets (run `scripts/s3-backend.sh` once if missing)
+Replace IPs after each Terraform apply — use `terraform output` and `capture-lab-aws-state.sh`.
 
 ---
 
-## Phase 0 — Terraform (dev + obs)
+## 2. Prerequisites
 
-**Path:** `Kubernetes/KubeADM-Day/kubeadm-on-ec2/{dev,obs}/`
+| Requirement | Detail |
+|-------------|--------|
+| AWS account | S3 state buckets: `cka-2026-study-terraform-state-{dev,obs,prod}` |
+| GitHub | Workflow `.github/workflows/kubeadm-terraform.yaml` on `cka-2026-study` |
+| Secrets | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`; GitHub env approvals: dev, obs |
+| SSH | dev: `kubeadm-on-ec2/dev/private_key.pem`; obs: Secrets Manager `kubeadm/obs/ssh-private-key` |
+| Laptop | `kubectl`, `helm`, `aws`, `gh` optional; operator IP in `*.tfvars` `allow_ssh_from_cidr_blocks` |
 
-**Option A — GHA:** Push to `cka-2026-study` under `kubeadm-on-ec2/**` → approve dev + obs applies.
+---
 
-**Option B — Local:**
+## 3. Setup sequence (strict order)
+
+Agents MUST follow this order. Do not skip peering or SG verification.
+
+### Phase 0 — Infrastructure
+
 ```bash
-cd kubeadm-on-ec2/dev && terraform init && terraform apply -var-file=dev.tfvars
-cd ../obs && terraform init && terraform apply -var-file=obs.tfvars
+# GHA: push to cka-2026-study under kubeadm-on-ec2/** OR local:
+cd Kubernetes/KubeADM-Day/kubeadm-on-ec2/dev && terraform apply -var-file=dev.tfvars
+cd ../obs && terraform apply -var-file=obs.tfvars
 ```
 
-**Gate:**
-```bash
-# 4 nodes each env from laptop
-aws ec2 describe-instances --region us-west-2 \
-  --filters "Name=tag:Environment,Values=dev" "Name=instance-state-name,Values=running" \
-  --query 'Reservations[].Instances[].Tags[?Key==`Name`].Value'
-# Expect: dev-k8s-m1, dev-k8s-w1, w2, w3 (same for obs)
-```
+### Phase 1 — VPC peering (manual, not in TF)
 
-**Outputs to save:** public IPs, SG IDs, `private_key.pem` (dev), Secrets Manager key (obs).
-
----
-
-## Phase 1 — VPC peering (manual, required)
-
-**Not in Terraform.** Create peering obs ↔ dev.
-
-1. Create peering connection between dev VPC and obs VPC → `<PEERING_ID>`
-2. Accept peering
-3. Enable DNS resolution both sides
-4. Add routes on **all** route tables (public + private):
+1. Create peering obs ↔ dev; accept; status **active**
+2. Enable DNS resolution both sides
+3. Add routes on **all** route tables (public + private):
    - dev → `10.210.0.0/16` via peering
    - obs → `10.110.0.0/16` via peering
 
-**Gate (from obs master after Phase 2, or from any instance in peered VPC):**
-```bash
-ping -c 2 $DEV_MASTER_PRIVATE
-```
-
-**If fail:** [security-groups-runbook.md](security-groups-runbook.md) + check routes, not just peering status.
-
----
-
-## Phase 2 — kubeadm bootstrap (both clusters)
-
-**Scripts:** `Kubernetes/KubeADM-Day/scripts/`
+### Phase 2 — kubeadm bootstrap (both clusters)
 
 ```bash
-# Laptop — copy scripts
-bash scripts/copy-scripts-to-nodes.sh dev
-bash scripts/copy-scripts-to-nodes.sh obs
+bash Kubernetes/KubeADM-Day/scripts/copy-scripts-to-nodes.sh dev
+bash Kubernetes/KubeADM-Day/scripts/copy-scripts-to-nodes.sh obs
 
-# Each master
+# On each master:
 sudo bash ~/prep-node-master.sh
 
-# Each worker (join cmd from master init output)
-export JOIN_CMD='kubeadm join <CP_PRIVATE>:6443 --token ... --discovery-token-ca-cert-hash sha256:...'
+# On each worker (JOIN_CMD from master init output):
+export JOIN_CMD='kubeadm join <CP_PRIVATE_IP>:6443 ...'
 sudo -E bash ~/prep-node-worker.sh
 ```
 
-**CNI:** Flannel applied by `prep-node-master.sh` (`10.244.0.0/16`).
+**Gates:** `kubectl get nodes` → 4 Ready; `kubectl get pods -n kube-flannel` → Running.
 
-**Gate (each cluster):**
+### Phase 3 — obs platform
+
+On **obs-master**:
+
 ```bash
-kubectl get nodes
-# 4/4 Ready
+git clone -b cka-2026-study https://github.com/htpractice/ht-study.git
+bash ht-study/Kubernetes/KubeADM-Day/scripts/install-obs-stack.sh
 
-kubectl get pods -n kube-flannel
-# All Running
-```
-
-**Common failures:** wrong pod CIDR, Calico leftover, SG UDP 8472 not full `/16` → [e2e-lab-complete-runbook.md §13](e2e-lab-complete-runbook.md#13-troubleshooting-encyclopedia).
-
----
-
-## Phase 3 — obs observability + Argo CD
-
-**Run on obs master:**
-```bash
-git clone https://github.com/htpractice/ht-study.git && cd ht-study
-git checkout cka-2026-study
-bash Kubernetes/KubeADM-Day/scripts/install-obs-stack.sh
-```
-
-Installs: Prometheus, Grafana, Loki+Promtail, Jaeger, OTel Collector, Argo CD.
-
-**Post-install — Loki NodePort (required for dev logs):**
-```bash
+# After stack up — Loki NodePort (if not in fresh install-obs-stack curl values):
 helm upgrade loki grafana/loki-stack -n observability \
-  -f Kubernetes/KubeADM-Day/manifests/obs/loki-stack-values.yaml
+  -f ht-study/Kubernetes/KubeADM-Day/manifests/obs/loki-stack-values.yaml
+
+kubectl apply -f ht-study/Kubernetes/Logs\&Monitoring-Day/manifests/otel-collector.yaml
 ```
 
-**OTel NodePort (required for dev traces):**
+**Gates:** `kubectl get pods -n observability` → prometheus-server, grafana, loki-0, jaeger, otel-collector Running.
+
+### Phase 4 — Argo CD multi-cluster
+
+On **obs-master**:
+
+1. Copy dev kubeconfig → `~/.kube/dev-config` (server URL = dev CP **private** IP `:6443`)
+2. Argo UI → Settings → Clusters → add cluster name **`dev`**
+3. Create Application from `Kubernetes/CICD-Day/argocd/application-order-api-kubeadm.yaml`
+4. On **dev**: create `dockerhub-creds` in `order-api` namespace
+5. Build/push **amd64** image on dev master if ImagePullBackOff:
+
 ```bash
-kubectl apply -f Kubernetes/Logs\&Monitoring-Day/manifests/otel-collector.yaml
+cd ht-study/Kubernetes/Logs\&Monitoring-Day/APP
+sudo docker build -t hthaware2508/order-api-lab:v1 .
+sudo docker login && sudo docker push hthaware2508/order-api-lab:v1
 ```
 
-**Gate:**
+**Gates:** `kubectl --kubeconfig ~/.kube/dev-config get pods -n order-api` → 3/3 Ready; `curl http://<dev-worker-ip>:30080/health`.
+
+### Phase 5 — Multicluster metrics
+
+On **dev-master**:
+
 ```bash
-kubectl get pods -n observability
-kubectl get pods -n argocd
-# prometheus-server, grafana, loki-0, jaeger, otel-collector, argocd-server Running
-
-kubectl get svc otel-collector -n observability -o jsonpath='{.spec.ports[?(@.name=="otlp-grpc")].nodePort}'
-# 30317
-
-kubectl get svc loki -n observability -o jsonpath='{.spec.ports[0].nodePort}'
-# 30100
+bash ht-study/Kubernetes/KubeADM-Day/scripts/install-dev-metrics.sh
+# note master IP for DEV_TARGET
 ```
 
-**Grafana:** admin / `cka-lab` — port-forward or SG :3000 from laptop.
+On **obs-master** (requires `~/.kube/dev-config`):
 
----
-
-## Phase 4 — Argo CD multi-cluster + order-api
-
-1. Copy dev kubeconfig to obs: `~/.kube/dev-config`
-2. Argo UI → Settings → Clusters → add dev (URL: `https://<DEV_MASTER_PRIVATE>:6443`)
-3. Create docker secret on dev:
-   ```bash
-   kubectl create secret docker-registry dockerhub-creds -n order-api \
-     --docker-username=... --docker-password=... --dry-run=client -o yaml | kubectl apply -f -
-   ```
-4. Apply Argo Application (on obs):
-   ```yaml
-   # Kubernetes/CICD-Day/argocd/application-order-api-kubeadm.yaml
-   destination.name: dev
-   helm.valueFiles: [values-kubeadm.yaml]
-   ```
-5. Build **amd64** image on dev master if needed:
-   ```bash
-   cd Kubernetes/Logs\&Monitoring-Day/APP
-   sudo docker build -t hthaware2508/order-api-lab:v1 .
-   sudo docker push hthaware2508/order-api-lab:v1
-   ```
-
-**Update** `values-kubeadm.yaml`:
-```yaml
-otel.exporterOtlpEndpoint: http://<OBS_MASTER_PRIVATE>:30317
-```
-
-**Gate:**
 ```bash
-# on dev
-kubectl get pods -n order-api
-curl http://<DEV_MASTER_PRIVATE>:30080/health
-
-kubectl exec -n order-api deploy/order-api -- env | grep OTEL
-# OTEL_EXPORTER_OTLP_ENDPOINT=http://<OBS_MASTER_PRIVATE>:30317
+DEV_TARGET=10.110.100.184:30301 bash ht-study/Kubernetes/KubeADM-Day/scripts/configure-obs-multicluster.sh
 ```
 
----
+**Gates:** script ends with `dev targets: 5`, `cluster labels: ['dev','obs']`, 8× `node-exporter up`.
 
-## Phase 5 — dev metrics (for multicluster Grafana)
+### Phase 6 — Cross-cluster logs
 
-**Run on dev master:**
+On **dev-master**:
+
 ```bash
-bash Kubernetes/KubeADM-Day/scripts/install-dev-metrics.sh
-# Note master IP for DEV_TARGET
+LOKI_TARGET=10.210.100.57:30100 bash ht-study/Kubernetes/KubeADM-Day/scripts/install-dev-promtail.sh
 ```
 
-**Gate:**
+**Gates:** Grafana Explore `{namespace="order-api", cluster="dev"}` returns JSON logs.
+
+### Phase 7 — Traces (GitOps)
+
+Ensure git has OTEL in `values-kubeadm.yaml` + deployment template. Argo sync `order-api`.
+
+**Gates:** `kubectl exec -n order-api deploy/order-api -- env | grep OTEL`; Jaeger UI service `order-api` after POST `/order` traffic.
+
+---
+
+## 4. Cross-VPC port matrix (SG bouncer)
+
+| Port | Direction | Service |
+|------|-----------|---------|
+| 6443 | obs → dev CP | Argo → dev API |
+| 9100 | obs → dev all nodes | node-exporter scrape |
+| 30301 | obs → dev master | kube-state-metrics |
+| 30317 | dev → obs | OTel OTLP |
+| 30100 | dev → obs | Loki push |
+| 8472 UDP | within each VPC `/16` | Flannel VXLAN |
+
+Verify before debugging app config:
+
 ```bash
-curl -s http://<DEV_MASTER_PRIVATE>:30301/metrics | head -1
-nc -vz <DEV_MASTER_PRIVATE> 9100
+# from obs: nc -vz 10.110.100.184 9100 30301 6443
+# from dev: nc -vz 10.210.100.57 30317 30100
 ```
+
+Full SG tables: [security-groups-runbook.md](security-groups-runbook.md).
 
 ---
 
-## Phase 6 — obs multicluster Prometheus
+## 5. Key config files (do not guess)
 
-**Run on obs master** (requires `~/.kube/dev-config`):
+| Component | Path |
+|-----------|------|
+| Terraform dev | `kubeadm-on-ec2/dev/` + `dev.tfvars` |
+| Terraform obs | `kubeadm-on-ec2/obs/` + `obs.tfvars` |
+| obs Prometheus base | `manifests/obs/prometheus-values.yaml` |
+| Multicluster Prometheus | generated by `scripts/configure-obs-multicluster.sh` |
+| Grafana datasources | `manifests/obs/grafana-values.yaml` |
+| Loki NodePort | `manifests/obs/loki-stack-values.yaml` |
+| OTel NodePort | `Logs&Monitoring-Day/manifests/otel-collector.yaml` |
+| order-api Helm | `CICD-Day/helm/order-api/values-kubeadm.yaml` |
+| Argo Application | `CICD-Day/argocd/application-order-api-kubeadm.yaml` |
+
+---
+
+## 6. Verification checklist (lab complete)
+
+- [ ] 8 EC2 running (4 dev + 4 obs)
+- [ ] Peering active; routes on all RTs
+- [ ] 4 nodes Ready per cluster
+- [ ] order-api 3 replicas on dev; NodePort 30080
+- [ ] Argo `order-api` Synced/Healthy
+- [ ] Prometheus: `count by (cluster) (kube_node_info)` → dev + obs
+- [ ] Prometheus: `count by (cluster,instance) (up{job="node-exporter"})` → 4+4
+- [ ] Grafana dashboards 15757/15760 show cluster dropdown; 1860 shows 8 nodes
+- [ ] Loki: `{namespace="order-api", cluster="dev"}`
+- [ ] Jaeger: service `order-api` traces after POST `/order`
+
+Diagnostic script: `DEV_TARGET=<dev-ip>:30301 bash scripts/diagnose-multicluster.sh`
+
+---
+
+## 7. Agent troubleshooting rules
+
+When user reports empty dashboard / no targets / no logs:
+
+1. **Network first:** `nc -vz` cross-VPC ports (§4) — not Grafana config
+2. **Prometheus targets API:** `curl localhost:9090/api/v1/targets` on obs — count dev jobs
+3. **Label issues:** stored `cluster` label requires **scrape relabel**, not `external_labels`
+4. **Chart v29:** use `scrapeConfigs` map + explicit `job_name: node-exporter`
+5. **Loki empty for order-api:** dev Promtail must push to obs — obs Promtail alone is insufficient
+6. **Jaeger empty:** OTEL env in git + otel-collector NodePort 30317 on obs — not in-cluster DNS from dev
+7. **Argo drift:** `selfHeal: true` reverts manual kubectl — fix git
+
+Full failure index: [e2e-lab-complete-runbook.md](e2e-lab-complete-runbook.md) §13.
+
+---
+
+## 8. Teardown
+
 ```bash
-DEV_TARGET=<DEV_MASTER_PRIVATE>:30301 \
-  bash Kubernetes/KubeADM-Day/scripts/configure-obs-multicluster.sh
-```
-
-**Gate (end of script output):**
-```
-dev targets: 5
-cluster labels: ['dev', 'obs']
-node-exporter up by cluster: 4 dev + 4 obs
-```
-
-**If `dev targets: 0`:** [observability-yaml-runbook.md §3](observability-yaml-runbook.md#3-prometheus-chart-v29-scrapeconfigs-not-extrasrapeconfigs)
-
-**Optional diagnose:**
-```bash
-DEV_TARGET=<DEV_MASTER_PRIVATE>:30301 \
-  bash Kubernetes/KubeADM-Day/scripts/diagnose-multicluster.sh
+# GitHub Actions: kubeadm-terraform-destroy.yaml → dev, then obs → confirm "destroy"
+# Manual: delete VPC peering after instances gone
+bash Kubernetes/KubeADM-Day/scripts/capture-lab-aws-state.sh ~/lab-aws-snapshot-$(date +%Y%m%d).txt
 ```
 
 ---
 
-## Phase 7 — dev logs → obs Loki
+## 9. Known non-blockers (ignore unless persistent)
 
-**Run on dev master:**
-```bash
-LOKI_TARGET=<OBS_MASTER_PRIVATE>:30100 \
-  bash Kubernetes/KubeADM-Day/scripts/install-dev-promtail.sh
-```
-
-**Gate (Grafana Explore → Loki):**
-```logql
-{namespace="order-api", cluster="dev"}
-```
+- `loki-0` 0/1 for 1–2 min after install
+- `argocd-dex-server` restart once
+- Loki `curl http://loki:3100` → 404 (normal)
+- Grafana Loki "Save & test" red while Explore works
 
 ---
 
-## Phase 8 — End-to-end verification
+## 10. Appendix — dead ends (do not retry)
 
-| Pillar | Check |
-|--------|-------|
-| **Metrics** | Grafana Explore: `count by (cluster, instance) (up{job="node-exporter"})` → 8 |
-| **K8s views** | Dashboards 15757/15760 — cluster dropdown dev + obs |
-| **App** | `curl -X POST http://<DEV_MASTER>:30080/order -H 'Content-Type: application/json' -d '{"item":"x","qty":1}'` |
-| **Traces** | Jaeger UI → service `order-api` |
-| **Logs** | Loki `{namespace="order-api", cluster="dev"}` |
-| **GitOps** | `kubectl get applications -n argocd` → Synced |
-
-**Cross-VPC connectivity gates (run before blaming YAML):**
-```bash
-# obs → dev
-nc -vz $DEV_MASTER_PRIVATE 6443 9100 30301
-# dev → obs
-nc -vz $OBS_MASTER_PRIVATE 30317 30100
-```
+| Attempt | Why it failed | Use instead |
+|---------|---------------|-------------|
+| Prometheus federation dev:30300 | dev has no Prometheus server | Direct scrape KSM:30301 + node-exp:9100 |
+| `server.external_labels.cluster` | Does not tag local TSDB | scrape `metric_relabel_configs` |
+| `extraScrapeConfigs` under `server:` on chart v29 | Ignored / wrong path | Root `scrapeConfigs` map |
+| Full Prometheus chart on dev | ServiceMonitor CRD missing | `install-dev-metrics.sh` only |
+| `otel-collector.obs.svc.cluster.local` from dev pods | DNS is cluster-local | NodePort 30317 on obs master IP |
+| obs Promtail only for order-api logs | Promtail is node-local | dev Promtail → obs Loki |
 
 ---
 
-## Security groups checklist
-
-Before Phase 6–7, confirm [security-groups-runbook.md](security-groups-runbook.md) cross-VPC rules exist (Terraform and/or console):
-
-- dev CP+worker: TCP 9100, 30301 (or 30300–30400) from `10.210.0.0/16`
-- dev CP: TCP 6443 from `10.210.0.0/16`
-- obs CP+worker: TCP 30100, 30317 (or 30000–35000) from `10.110.0.0/16`
-- both: UDP 8472 from full VPC `/16`
-
----
-
-## Teardown
-
-1. Capture state: `bash scripts/capture-lab-aws-state.sh ~/lab-aws-snapshot.txt`
-2. GHA: `.github/workflows/kubeadm-terraform-destroy.yaml` → `destroy` → dev, then obs
-3. Delete VPC peering manually if orphaned
-
----
-
-## File map (source of truth in git)
-
-| Purpose | Path |
-|---------|------|
-| **This spec** | `docs/LAB-SPEC.md` |
-| Terraform dev | `kubeadm-on-ec2/dev/` |
-| Terraform obs | `kubeadm-on-ec2/obs/` |
-| Bootstrap scripts | `scripts/prep-node-*.sh`, `copy-scripts-to-nodes.sh` |
-| obs stack installer | `scripts/install-obs-stack.sh` |
-| dev metrics | `scripts/install-dev-metrics.sh` |
-| dev logs | `scripts/install-dev-promtail.sh` |
-| multicluster prom | `scripts/configure-obs-multicluster.sh` |
-| Helm app | `../../CICD-Day/helm/order-api/` |
-| Argo app | `../../CICD-Day/argocd/application-order-api-kubeadm.yaml` |
-| obs prom/grafana/loki values | `manifests/obs/*.yaml` |
-| OTEL/Jaeger manifests | `../../Logs&Monitoring-Day/manifests/` |
-
----
-
-## Known failure index (12-hour lab)
-
-| # | Symptom | Doc |
-|---|---------|-----|
-| 1 | Nodes NotReady / CNI | e2e §13 #1–2 |
-| 2 | Cross-node pods fail | SG runbook — UDP 8472 `/16` |
-| 3 | Argo can't sync dev | SG 6443 + peering |
-| 4 | ImagePullBackOff exec format | yaml §12 — amd64 rebuild |
-| 5 | No Grafana pod | yaml §6 |
-| 6 | cluster dropdown empty | yaml §2 — relabel not external_labels |
-| 7 | dev targets: 0 | yaml §3 — scrapeConfigs map |
-| 8 | node exporter dashboard wrong | yaml §4 — job_name |
-| 9 | ServiceMonitor CRD error | yaml §5 |
-| 10 | Loki empty for order-api | yaml §8 — dev Promtail |
-| 11 | Jaeger empty | yaml §9 — OTEL + NodePort 30317 |
-| 12 | kubectl patch reverted | yaml §11 — Argo selfHeal |
-
----
-
-*Spec version: 2026-08-10 — validated on live AWS dev+obs cluster.*
+*Spec version: 2026-08-10 — validated on live lab pcx-0a20139fd655d1170, account 725335002991.*

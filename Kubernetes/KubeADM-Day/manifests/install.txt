@@ -1,0 +1,118 @@
+# =============================================================================
+# FRESH START (run on ALL 4 nodes if Calico/Tigera left cluster broken)
+# =============================================================================
+# Why reset alone fails: Calico CRDs, Tigera operator, CNI configs, cali* interfaces
+# and iptables rules survive kubeadm reset → kube-proxy/CoreDNS crashloop on re-init.
+#
+# Order: reset ALL nodes → prep ALL nodes → init CP ONLY → Calico → join workers
+
+# On each node (master + worker1/2/3):
+sudo bash reset-node.sh
+sudo bash prep-node.sh
+
+# On control plane ONLY (after all nodes prepped):
+PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+sudo kubeadm init \
+  --pod-network-cidr=10.244.0.0/16 \
+  --apiserver-advertise-address="${PRIVATE_IP}" \
+  --kubernetes-version=v1.35.7
+
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# IMPORTANT: Flannel (simple). Pod CIDR 10.244.0.0/16 — NOT Calico 192.168.0.0/16
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+
+kubectl get nodes -w          # wait: master Ready
+kubectl get pods -n kube-system -w
+
+# Then join workers (one at a time is fine):
+# sudo kubeadm join <CP_PRIVATE_IP>:6443 --token ... --discovery-token-ca-cert-hash sha256:...
+
+
+# =============================================================================
+# Initial cluster prep (all nodes) — see scripts/prep-node.sh
+# =============================================================================
+scp -i private_key.pem ../scripts/prep-node.sh ubuntu@<cp-ip>:~
+ssh -i private_key.pem ubuntu@<cp-ip>
+sudo bash prep-node.sh
+# kubeadm init ... (from docs/kubeadm-setup.md)
+
+
+# =============================================================================
+# Cluster upgrade — target v1.35.5 (deb: 1.35.5-1.1)
+# =============================================================================
+# RULE: kubeadm upgrades ONE minor version at a time.
+#   1.30.x → 1.31.x → 1.32.x → 1.33.x → 1.34.x → 1.35.5
+# Repeat the block below for EACH hop. Change TARGET_* vars each time.
+#
+# Interview lab shortcut: do ONE hop only (e.g. 1.30.14 → 1.31.x) — same commands.
+
+# --- set per hop (example: final hop to 1.35.5) ---
+TARGET_MINOR=v1.35          # kubeadm upgrade apply uses this (no -1.1 suffix)
+TARGET_PATCH=v1.35.5        # kubeadm upgrade apply patch version
+TARGET_DEB=1.35.5-1.1       # apt package version (verify with madison below)
+
+# 0) Confirm available package (on node, after repo update in step 1)
+sudo apt-get update
+apt-cache madison kubeadm | grep 1.35
+# If 1.35.5-1.1 missing, pick latest 1.35.x-1.1 and set TARGET_DEB / TARGET_PATCH accordingly
+
+
+# =============================================================================
+# CONTROL PLANE — run on CP only
+# =============================================================================
+
+# 1) Point apt at target minor repo + install target kubeadm first
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${TARGET_MINOR}/deb/Release.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${TARGET_MINOR}/deb/ /" \
+  | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt-get update
+sudo apt-mark unhold kubeadm kubelet kubectl
+sudo apt-get install -y kubeadm=${TARGET_DEB}
+sudo apt-mark hold kubeadm
+
+# 2) Plan + apply control plane upgrade
+sudo kubeadm upgrade plan
+sudo kubeadm upgrade apply ${TARGET_PATCH}
+
+# 3) Upgrade kubelet + kubectl on CP (drain CP first if it runs workloads)
+# kubectl drain <cp-hostname> --ignore-daemonsets --delete-emptydir-data
+sudo apt-get install -y kubelet=${TARGET_DEB} kubectl=${TARGET_DEB}
+sudo apt-mark hold kubelet kubeadm kubectl
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+# kubectl uncordon <cp-hostname>
+
+kubeadm version
+kubelet --version
+kubectl version --client
+kubectl get nodes
+
+
+# =============================================================================
+# WORKERS — repeat per worker (w1, w2, w3)
+# =============================================================================
+
+# From CP (or laptop with kubeconfig):
+# kubectl drain <worker-hostname> --ignore-daemonsets --delete-emptydir-data
+
+# On the worker node:
+#   (same repo/key steps 1–3 if not already on TARGET_MINOR repo)
+sudo apt-mark unhold kubeadm kubelet kubectl
+sudo apt-get install -y kubeadm=${TARGET_DEB} kubelet=${TARGET_DEB} kubectl=${TARGET_DEB}
+sudo kubeadm upgrade node
+sudo apt-mark hold kubelet kubeadm kubectl
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+# From CP:
+# kubectl uncordon <worker-hostname>
+# kubectl get nodes -o wide

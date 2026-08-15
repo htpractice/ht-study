@@ -58,7 +58,7 @@ module "kubeadm_control_plane_sg" {
       from_port   = 8472
       to_port     = 8472
       ip_protocol = "udp"
-      description = "Flannel VXLAN — required for cross-node pod traffic"
+      description = "Flannel VXLAN - required for cross-node pod traffic"
       cidr_ipv4   = var.vpc_cidr
     }
     "2379-2380-tcp" = {
@@ -100,7 +100,7 @@ module "kubeadm_control_plane_sg" {
       from_port   = 30000
       to_port     = 35000
       ip_protocol = "tcp"
-      description = "NodePort services from dev (OTEL, Loki — matches live console rule)"
+      description = "NodePort services from dev (OTEL, Loki - matches live console rule)"
       cidr_ipv4   = "10.110.0.0/16"
     }
     "179-bgp-tcp" = {
@@ -143,7 +143,7 @@ module "kubeadm_worker_node_sg" {
       from_port   = 8472
       to_port     = 8472
       ip_protocol = "udp"
-      description = "Flannel VXLAN — required for cross-node pod traffic"
+      description = "Flannel VXLAN - required for cross-node pod traffic"
       cidr_ipv4   = var.vpc_cidr
     }
     "10250-tcp" = {
@@ -178,7 +178,7 @@ module "kubeadm_worker_node_sg" {
       from_port   = 30000
       to_port     = 35000
       ip_protocol = "tcp"
-      description = "NodePort services from dev (OTEL, Loki — matches live console rule)"
+      description = "NodePort services from dev (OTEL, Loki - matches live console rule)"
       cidr_ipv4   = "10.110.0.0/16"
     }
     "30000-32767-tcp" = {
