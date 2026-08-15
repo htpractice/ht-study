@@ -1,0 +1,119 @@
+# Loki + Jaeger central backends (obs cluster only)
+
+resource "kubernetes_namespace_v1" "observability" {
+  count = (var.enable_obs_backend || var.enable_promtail) ? 1 : 0
+
+  metadata {
+    name = var.observability_namespace
+  }
+
+  depends_on = [module.eks_addons]
+}
+
+resource "helm_release" "loki" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  name             = "loki"
+  namespace        = var.observability_namespace
+  create_namespace = false
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "loki-stack"
+  version          = "2.10.2"
+  timeout          = 600
+  wait             = true
+
+  values = [file("${path.module}/helm-values/loki-stack-obs.yaml")]
+
+  depends_on = [kubernetes_namespace_v1.observability]
+}
+
+resource "kubectl_manifest" "jaeger" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  yaml_body = file("${path.module}/../../../manifests/jaeger.yaml")
+
+  depends_on = [kubernetes_namespace_v1.observability]
+}
+
+# Internal NLB so workload ADOT / Promtail reach Jaeger OTLP over VPC peering
+resource "kubectl_manifest" "jaeger_otlp_lb" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: jaeger-otlp-lb
+      namespace: ${var.observability_namespace}
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    spec:
+      type: LoadBalancer
+      selector:
+        app: jaeger
+      ports:
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+  YAML
+
+  depends_on = [kubectl_manifest.jaeger]
+}
+
+resource "time_sleep" "wait_for_telemetry_lb" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  create_duration = "90s"
+
+  depends_on = [
+    module.eks_addons,
+    helm_release.loki,
+    kubectl_manifest.jaeger_otlp_lb,
+  ]
+}
+
+data "kubernetes_service_v1" "prometheus_lb" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  metadata {
+    name      = "${var.kube_prometheus_release_name}-kube-prometheus-prometheus"
+    namespace = var.monitoring_namespace
+  }
+
+  depends_on = [time_sleep.wait_for_telemetry_lb]
+}
+
+data "kubernetes_service_v1" "loki_lb" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  metadata {
+    name      = "loki"
+    namespace = var.observability_namespace
+  }
+
+  depends_on = [time_sleep.wait_for_telemetry_lb]
+}
+
+data "kubernetes_service_v1" "jaeger_otlp_lb" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  metadata {
+    name      = "jaeger-otlp-lb"
+    namespace = var.observability_namespace
+  }
+
+  depends_on = [time_sleep.wait_for_telemetry_lb]
+}
+
+locals {
+  obs_prometheus_lb_host = var.enable_obs_backend ? try(data.kubernetes_service_v1.prometheus_lb[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
+  obs_loki_lb_host       = var.enable_obs_backend ? try(data.kubernetes_service_v1.loki_lb[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
+  obs_jaeger_lb_host     = var.enable_obs_backend ? try(data.kubernetes_service_v1.jaeger_otlp_lb[0].status[0].load_balancer[0].ingress[0].hostname, "") : ""
+
+  prometheus_remote_write_url = var.cluster_role == "obs" ? "http://${var.kube_prometheus_release_name}-kube-prometheus-prometheus.${var.monitoring_namespace}.svc.cluster.local:9090/api/v1/write" : var.obs_prometheus_remote_write_url
+  jaeger_otlp_endpoint        = var.cluster_role == "obs" ? "jaeger.${var.observability_namespace}.svc.cluster.local:4317" : var.obs_jaeger_otlp_endpoint
+  loki_push_url               = var.cluster_role == "obs" ? "http://loki.${var.observability_namespace}.svc.cluster.local:3100/loki/api/v1/push" : var.obs_loki_push_url
+  telemetry_cluster_label     = var.cluster_role == "workload" ? "retail-workload" : "obs"
+}

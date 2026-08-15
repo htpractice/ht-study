@@ -1,0 +1,32 @@
+# Central Prometheus on obs cluster — accepts remote_write from workload ADOT
+prometheus:
+  prometheusSpec:
+    enableRemoteWriteReceiver: true
+    retention: 2d
+    externalLabels:
+      cluster: obs
+  service:
+    type: LoadBalancer
+    port: 9090
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+
+grafana:
+  enabled: true
+  adminPassword: cka-lab
+  service:
+    type: ClusterIP
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki.observability.svc.cluster.local:3100
+      access: proxy
+    - name: Jaeger
+      type: jaeger
+      url: http://jaeger.observability.svc.cluster.local:16686
+      access: proxy
+
+alertmanager:
+  enabled: false

@@ -1,0 +1,22 @@
+provisionDataStore:
+  cassandra: false
+  elasticsearch: false
+allInOne:
+  enabled: true
+  service:
+    type: ClusterIP
+collector:
+  enabled: false
+query:
+  enabled: false
+agent:
+  enabled: false
+storage:
+  type: memory
+jaeger:
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
