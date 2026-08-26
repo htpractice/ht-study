@@ -27,7 +27,7 @@ ConfigMap / Secret  →  inject into Pod  →  app reads env or files
 
 \* etcd encryption at rest is a separate cluster config (CKS territory).
 
-**CrowdStrike / SRE angle:** Role mentions **Vault + automated secret rotation**. K8s Secrets are a delivery mechanism; Vault/External Secrets Operator holds truth in production.
+**Platform SRE angle:** Role mentions **Vault + automated secret rotation**. K8s Secrets are a delivery mechanism; Vault/External Secrets Operator holds truth in production.
 
 ---
 
@@ -189,7 +189,7 @@ env:
 | **Rotation** | Needs pod restart | Kubelet may sync file (~60s) |
 | **Production** | OK for small apps | **Preferred** for DB passwords, TLS keys |
 
-**CrowdStrike / Vault:** Vault holds truth → External Secrets Operator syncs → K8s Secret → volume mount into pod.
+**Platform / Vault:** Vault holds truth → External Secrets Operator syncs → K8s Secret → volume mount into pod.
 
 ---
 
@@ -313,7 +313,7 @@ kc explain pod.spec.volumes.secret
 | Updated CM/Secret, env unchanged? | Env frozen at container start — restart required |
 | Updated Secret, file unchanged? | Wait for kubelet sync (~60s) or restart; check mount path |
 | Why not bake config in image? | Same image across envs; GitOps manages CM/Secret separately |
-| How does CrowdStrike stack handle secrets? | Vault + GitOps rotation; K8s Secret as delivery layer into pods |
+| How does a production platform stack handle secrets? | Vault + GitOps rotation; K8s Secret as delivery layer into pods |
 | Is base64 encryption? | **No** — encoding only; anyone with Secret read RBAC can decode |
 
 ---

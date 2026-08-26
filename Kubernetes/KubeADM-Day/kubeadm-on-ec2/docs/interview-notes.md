@@ -1,6 +1,6 @@
 # kubeadm & cluster operations — interview notes
 
-Quick reference for CrowdStrike **Cloud & Kubernetes at Scale** topics.
+Quick reference for **Cloud & Kubernetes at Scale** (CKA / platform SRE).
 
 ---
 

@@ -1,5 +1,10 @@
 # EKS add-ons — from retail-store-sample-app/terraform/addons.tf
 
+resource "time_sleep" "wait_for_eks_api" {
+  create_duration = "120s"
+  depends_on      = [module.eks]
+}
+
 module "eks_addons" {
   source  = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.0"
@@ -88,5 +93,5 @@ module "eks_addons" {
     values           = var.enable_kube_prometheus_stack ? [file("${path.module}/helm-values/kube-prometheus-obs.yaml")] : []
   }
 
-  depends_on = [module.eks]
+  depends_on = [time_sleep.wait_for_eks_api]
 }

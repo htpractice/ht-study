@@ -46,4 +46,5 @@ observability/terraform/modules/eks-cluster/
   argocd.tf           # workload only
 ```
 
-See [docs/LAB-SPEC.md](docs/LAB-SPEC.md) for verification queries and interview talking points.
+See [docs/LAB-SPEC.md](docs/LAB-SPEC.md) for verification queries and platform SRE talking points.  
+Practice path: [docs/PRACTICE-ROADMAP.md](docs/PRACTICE-ROADMAP.md) · [docs/TROUBLESHOOTING-REF.md](docs/TROUBLESHOOTING-REF.md)

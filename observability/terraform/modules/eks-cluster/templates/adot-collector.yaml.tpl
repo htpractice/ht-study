@@ -35,7 +35,27 @@ spec:
                 - source_labels: [__meta_kubernetes_pod_name]
                   action: replace
                   target_label: pod
-            - job_name: kubernetes-nodes
+%{ if enable_infra_metrics_export ~}
+            - job_name: kube-state-metrics
+              honor_labels: true
+              kubernetes_sd_configs:
+                - role: endpoints
+                  namespaces:
+                    names:
+                      - ${monitoring_namespace}
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name]
+                  action: keep
+                  regex: kube-state-metrics
+                - source_labels: [__meta_kubernetes_endpoint_port_name]
+                  action: keep
+                  regex: http
+            - job_name: kubernetes-nodes-cadvisor
+              scheme: https
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                insecure_skip_verify: true
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
               kubernetes_sd_configs:
                 - role: node
               relabel_configs:
@@ -47,6 +67,14 @@ spec:
                   regex: (.+)
                   target_label: __metrics_path__
                   replacement: /api/v1/nodes/$$1/proxy/metrics/cadvisor
+                - source_labels: [__meta_kubernetes_node_name]
+                  action: replace
+                  target_label: node
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  regex: container_(cpu|memory|network|fs).*
+                  action: keep
+%{ endif ~}
       otlp:
         protocols:
           grpc:
@@ -63,6 +91,8 @@ spec:
     exporters:
       prometheusremotewrite:
         endpoint: ${prometheus_remote_write_url}
+        resource_to_telemetry_conversion:
+          enabled: true
       otlp:
         endpoint: ${jaeger_otlp_endpoint}
         tls:

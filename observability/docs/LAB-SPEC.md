@@ -2,7 +2,8 @@
 
 Terraform is adapted from [retail-store-sample-app](../../../retail-store-sample-app/terraform/) (fork: `htpractice/retail-store-sample-app`).
 
----
+**Runbook:** [TROUBLESHOOTING-REF.md](./TROUBLESHOOTING-REF.md) — commands, PromQL/LogQL, incidents, Grafana panels.  
+**Practice plan:** [PRACTICE-ROADMAP.md](./PRACTICE-ROADMAP.md) — PromQL levels, SLO dashboard, 70–80% checklist.
 
 ## Architecture
 
@@ -50,6 +51,7 @@ bash scripts/verify-telemetry.sh
 - ArgoCD + retail-store apps
 - ADOT → remote_write to obs Prometheus (URL from obs terraform state)
 - Promtail → push logs to obs Loki
+- **kube-state-metrics** + cAdvisor scrape via ADOT → infra metrics for default Grafana dashboards
 
 **Gates:**
 ```bash
@@ -117,10 +119,11 @@ terraform -chdir=terraform/environments/workload output retail_store_url
 | Retail fork | `htpractice/retail-store-sample-app` on `main`, `values-obs-on-eks.yaml`, OTel/trace fixes | fork (already pushed) |
 | ADOT collector | SA + ClusterRole + RBAC before `OpenTelemetryCollector` CR | `terraform/modules/eks-cluster/telemetry-adot-rbac.tf` |
 | Loki | `loki-stack` chart (not `loki` v6), `useTestSchema` not needed | `helm-values/loki-stack-obs.yaml` |
-| Jaeger | Deployment via TF; Grafana DS URL `jaeger` not `jaeger-query` | `manifests/jaeger.yaml`, `helm-values/kube-prometheus-obs.yaml` |
+| Jaeger | Split Service + Deployment in TF (`kubectl_manifest` is one doc per block); Grafana DS URL `jaeger` not `jaeger-query` | `obs-backend.tf`, `manifests/jaeger.yaml`, `helm-values/kube-prometheus-obs.yaml` |
 | Helm provider | v3 syntax `kubernetes = { ... }` | `terraform/modules/eks-cluster/versions.tf` |
 | Namespace | `kubernetes_namespace_v1` for observability | `obs-backend.tf` |
 | ArgoCD apps | `imagePullSecrets: []` in overlay (public ECR) | fork `values-obs-on-eks.yaml` |
+| Infra metrics | kube-state-metrics on workload + ADOT cAdvisor/KSM scrape → remote_write | `telemetry-kube-state-metrics.tf`, `adot-collector.yaml.tpl` |
 
 **Deploy order:** obs → workload → peering (`scripts/deploy-infra.sh`).
 
@@ -134,7 +137,14 @@ kubectl --context workload-eks get applications -n argocd                   # al
 
 **Verify all three signals:**
 ```promql
-up{cluster="retail-workload"}                          # Prometheus
+# App metrics
+up{namespace="retail-store", app_kubernetes_io_instance="retail-store-ui"}
+http_server_requests_seconds_count{app_kubernetes_io_instance="retail-store-ui"}
+
+# Infra metrics (Grafana Pod Compute dashboard / namespace dropdown)
+kube_pod_info{namespace="retail-store", cluster="retail-workload"}
+container_cpu_usage_seconds_total{namespace="retail-store", cluster="retail-workload"}
+rate(container_cpu_usage_seconds_total{namespace="retail-store", pod=~"retail-store-ui.*"}[5m])
 ```
 ```logql
 {cluster="retail-workload"}                            # Loki

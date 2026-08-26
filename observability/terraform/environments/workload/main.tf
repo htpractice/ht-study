@@ -52,6 +52,7 @@ module "cluster" {
   enable_obs_backend           = false
   enable_adot                  = true
   enable_promtail              = true
+  enable_infra_metrics_export  = true
   enable_argocd                = true
   argocd_root_path             = local.retail_store_argocd
 

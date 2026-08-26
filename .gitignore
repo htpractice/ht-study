@@ -1,8 +1,13 @@
 # Work-related local notes — not part of CKA study track
 Kubernetes/AEP-local-to-k8s/
 
-# Interview prep — local only
+# Interview prep — local only (company-specific)
 interview-prep/
+
+# Upstream reference clones — re-clone via observability/docs/REFERENCES.md
+observability/application-monitoring-prometheus/
+observability/loki-prometheus-grafana-kubernetes-logging-monitoring/
+observability/prometheus-docker-compose/
 
 # OS / Python artifacts
 .DS_Store

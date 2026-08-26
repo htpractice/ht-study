@@ -45,7 +45,7 @@ IAM minimum for lab: `AmazonEC2ContainerRegistryPowerUser` + EKS cluster access 
 ### Screenshot folder
 
 ```bash
-mkdir -p ~/crowdstrike-prep/aws-e2e-$(date +%Y%m%d)
+mkdir -p ~/ht-study/aws-e2e-$(date +%Y%m%d)
 ```
 
 ---
@@ -66,7 +66,7 @@ terraform apply tfplan
 Save outputs:
 
 ```bash
-terraform output -json | tee ~/crowdstrike-prep/aws-e2e-*/terraform-outputs.json
+terraform output -json | tee ~/ht-study/aws-e2e-*/terraform-outputs.json
 export CLUSTER=$(terraform output -raw cluster_name)
 export ECR_URL=$(terraform output -raw ecr_repository_url)
 aws eks update-kubeconfig --name "$CLUSTER" --region ap-south-1

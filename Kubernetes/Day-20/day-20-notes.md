@@ -185,7 +185,7 @@ kc create secret tls app-tls-secret \
 | Internal mTLS | App Mesh / sidecar | Istio/Linkerd service mesh |
 | Secrets storage | Secrets Manager → task | K8s Secret (base64) + Vault in prod |
 
-**CrowdStrike stack note:** Role mentions **Vault** for secret lifecycle — TLS private keys and API tokens often originate in Vault, sync into K8s Secrets via operators.
+**Platform stack note:** Role mentions **Vault** for secret lifecycle — TLS private keys and API tokens often originate in Vault, sync into K8s Secrets via operators.
 
 ---
 

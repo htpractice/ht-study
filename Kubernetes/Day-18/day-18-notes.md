@@ -224,7 +224,7 @@ kc explain pod.spec.containers.livenessProbe
 | How do probes relate to SLOs? | Readiness keeps bad replicas out of traffic → protects availability SLO during partial failure |
 | ECS equivalent? | Liveness ≈ container healthCheck; readiness ≈ load balancer target health |
 
-**Platform SRE angle (CrowdStrike-style):** Probes are the **first line** of automated recovery (kubelet restarts, traffic shedding). They complement — not replace — Prometheus alerts, synthetic checks, and incident runbooks. Near-zero downtime = readiness gates + rolling updates + PDBs (later days).
+**Platform SRE angle:** Probes are the **first line** of automated recovery (kubelet restarts, traffic shedding). They complement — not replace — Prometheus alerts, synthetic checks, and incident runbooks. Near-zero downtime = readiness gates + rolling updates + PDBs (later days).
 
 ---
 

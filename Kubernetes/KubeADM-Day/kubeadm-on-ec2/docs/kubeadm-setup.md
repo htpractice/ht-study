@@ -1,6 +1,6 @@
 # kubeadm cluster setup — Mac lab (Multipass)
 
-**Goal:** Real kubeadm cluster (not kind) so you can practice **`kubeadm upgrade`** for the CrowdStrike round.
+**Goal:** Real kubeadm cluster (not kind) for **`kubeadm upgrade`**, drain, and PDB practice.
 
 **Layout:** `docs/` (guides) · `scripts/` (run on Ubuntu VMs)
 

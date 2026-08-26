@@ -14,11 +14,14 @@ resource "kubectl_manifest" "adot_collector" {
     cluster_label               = local.telemetry_cluster_label
     prometheus_remote_write_url = local.prometheus_remote_write_url
     jaeger_otlp_endpoint        = local.jaeger_otlp_endpoint
+    enable_infra_metrics_export = var.enable_infra_metrics_export
+    monitoring_namespace        = var.monitoring_namespace
   })
 
   depends_on = [
     time_sleep.wait_for_adot_deps,
     kubernetes_service_account_v1.adot_collector,
     kubernetes_cluster_role_binding_v1.adot_collector,
+    helm_release.kube_state_metrics,
   ]
 }

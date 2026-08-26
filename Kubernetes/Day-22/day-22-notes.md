@@ -242,7 +242,7 @@ kc describe rolebinding read-pods -n rbac-lab
 | Who uses Node authorization? | **Kubelet** — limited to its own node resources |
 | Secrets access? | Explicit rule: `resources: ["secrets"]` — not included in `view` for all secret types |
 
-**CrowdStrike stack:** RBAC + network policies + Vault + mesh — layered; RBAC is the Kubernetes-native identity authorization layer.
+**Platform stack:** RBAC + network policies + Vault + mesh — layered; RBAC is the Kubernetes-native identity authorization layer.
 
 ---
 

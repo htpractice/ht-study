@@ -740,4 +740,4 @@ LOKI_TARGET=10.210.100.57:30100 bash install-dev-promtail.sh
 
 ---
 
-*Lab built for CrowdStrike SRE interview prep — kubeadm + GitOps + full observability stack on AWS.*
+*Lab built for CKA / platform SRE practice — kubeadm + GitOps + full observability stack on AWS.*

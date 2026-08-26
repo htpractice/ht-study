@@ -27,12 +27,85 @@ resource "helm_release" "loki" {
   depends_on = [kubernetes_namespace_v1.observability]
 }
 
-resource "kubectl_manifest" "jaeger" {
+# kubectl_manifest applies one resource per block; multi-doc jaeger.yaml only created the Service.
+resource "kubectl_manifest" "jaeger_service" {
   count = var.enable_obs_backend ? 1 : 0
 
-  yaml_body = file("${path.module}/../../../manifests/jaeger.yaml")
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: jaeger
+      namespace: ${var.observability_namespace}
+      labels:
+        app: jaeger
+    spec:
+      selector:
+        app: jaeger
+      ports:
+        - name: ui
+          port: 16686
+          targetPort: 16686
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+        - name: otlp-http
+          port: 4318
+          targetPort: 4318
+  YAML
 
   depends_on = [kubernetes_namespace_v1.observability]
+}
+
+resource "kubectl_manifest" "jaeger_deployment" {
+  count = var.enable_obs_backend ? 1 : 0
+
+  yaml_body = <<-YAML
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: jaeger
+      namespace: ${var.observability_namespace}
+      labels:
+        app: jaeger
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: jaeger
+      template:
+        metadata:
+          labels:
+            app: jaeger
+        spec:
+          containers:
+            - name: jaeger
+              image: jaegertracing/all-in-one:1.57
+              env:
+                - name: COLLECTOR_OTLP_ENABLED
+                  value: "true"
+              ports:
+                - name: ui
+                  containerPort: 16686
+                - name: otlp-grpc
+                  containerPort: 4317
+                - name: otlp-http
+                  containerPort: 4318
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+  YAML
+
+  depends_on = [kubectl_manifest.jaeger_service]
+}
+
+moved {
+  from = kubectl_manifest.jaeger
+  to   = kubectl_manifest.jaeger_service
 }
 
 # Internal NLB so workload ADOT / Promtail reach Jaeger OTLP over VPC peering
@@ -59,7 +132,7 @@ resource "kubectl_manifest" "jaeger_otlp_lb" {
           targetPort: 4317
   YAML
 
-  depends_on = [kubectl_manifest.jaeger]
+  depends_on = [kubectl_manifest.jaeger_deployment]
 }
 
 resource "time_sleep" "wait_for_telemetry_lb" {

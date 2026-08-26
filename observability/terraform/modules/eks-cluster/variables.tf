@@ -153,3 +153,9 @@ variable "obs_jaeger_otlp_endpoint" {
   type        = string
   default     = ""
 }
+
+variable "enable_infra_metrics_export" {
+  description = "Workload only: install kube-state-metrics and scrape cAdvisor via ADOT for Grafana infra dashboards"
+  type        = bool
+  default     = false
+}
