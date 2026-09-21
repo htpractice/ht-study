@@ -17,6 +17,10 @@ Multicluster observability lab:
 | **Logs** | Promtail DaemonSet (per node) | Loki | Internal NLB over VPC peering |
 | **Traces** | ADOT (OTLP receiver → export) | Jaeger | Internal NLB :4317 over peering |
 
+## Before you deploy (billing)
+
+**[docs/AWS-BILLING-CHECKLIST.md](docs/AWS-BILLING-CHECKLIST.md)** — EKS version support tier, multicluster cost multiplier, destroy verification. Read this to avoid extended-support surprises.
+
 ## Deploy (order matters: obs → workload → peering)
 
 ```bash

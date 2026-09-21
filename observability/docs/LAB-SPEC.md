@@ -34,6 +34,16 @@ Fork: https://github.com/htpractice/retail-store-sample-app
 
 ---
 
+## Phase 0.5 — Billing checklist (mandatory)
+
+**[AWS-BILLING-CHECKLIST.md](./AWS-BILLING-CHECKLIST.md)** — before every deploy:
+
+1. Confirm `kubernetes_version` in `obs.tfvars` and `workload.tfvars` is still in **standard support** (not extended — $0.60 vs $0.10 per cluster per hour).
+2. Remember **two clusters** = double control plane + NAT.
+3. Plan teardown: `bash scripts/destroy-infra.sh` when done.
+
+---
+
 ## Phase 1 — Terraform (obs → peering → workload)
 
 ```bash

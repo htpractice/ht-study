@@ -26,6 +26,8 @@ These stay on your machine — see [`.gitignore`](.gitignore):
 
 ## Observability lab (obs-on-eks)
 
+**Before deploy:** [observability/docs/AWS-BILLING-CHECKLIST.md](observability/docs/AWS-BILLING-CHECKLIST.md) (EKS version / extended support / teardown).
+
 ```bash
 cd observability
 bash scripts/bootstrap-state.sh    # once
