@@ -1,0 +1,68 @@
+{
+  "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+  },
+  "description": "(5xx/total)/0.001 as SLO is 99.99% while performing math in formula decimal values are used.",
+  "fieldConfig": {
+    "defaults": {
+      "color": {
+        "mode": "thresholds"
+      },
+      "mappings": [],
+      "thresholds": {
+        "mode": "percentage",
+        "steps": [
+          {
+            "color": "green",
+            "value": null
+          },
+          {
+            "color": "red",
+            "value": 80
+          }
+        ]
+      }
+    },
+    "overrides": []
+  },
+  "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 42
+  },
+  "id": 6,
+  "libraryPanel": {
+    "name": "error budget consumption",
+    "uid": ""
+  },
+  "options": {
+    "orientation": "auto",
+    "reduceOptions": {
+      "calcs": [
+        "lastNotNull"
+      ],
+      "fields": "",
+      "values": false
+    },
+    "showThresholdLabels": false,
+    "showThresholdMarkers": true
+  },
+  "pluginVersion": "10.0.2",
+  "targets": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "editorMode": "code",
+      "expr": "((sum(rate(http_server_requests_seconds_count{namespace=\"retail-store\",app_kubernetes_io_instance=\"retail-store-orders\",status=~\"5..\"}[5m]))/sum(rate(http_server_requests_seconds_count{namespace=\"retail-store\",app_kubernetes_io_instance=\"retail-store-orders\"}[5m]))/0.001)) * 100 or on() vector(0)",
+      "instant": false,
+      "range": true,
+      "refId": "A"
+    }
+  ],
+  "title": "error budget consumption",
+  "type": "gauge"
+}

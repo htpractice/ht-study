@@ -1,0 +1,44 @@
+# PREFERRED node affinity — disktype In [hdd] (no matching nodes)
+#
+# Proves soft affinity: when NO node matches, scheduler still places pods anywhere.
+# Lab: no node labeled disktype=hdd
+# Result: pods spread across worker and worker2 — preference ignored, not blocked
+#
+# Compare with affinity-deploy.yaml (required) which would stay Pending with no match
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: affinity-no-pref-pod
+  name: affinity-no-pref-pod
+  namespace: affinity
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: affinity-no-pref-pod
+  template:
+    metadata:
+      labels:
+        app: affinity-no-pref-pod
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                - hdd
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi

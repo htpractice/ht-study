@@ -1,0 +1,12 @@
+# ServiceAccount — identity for non-human workloads (monitoring-bot)
+#
+# Used by: Prometheus, Grafana agents, CI/CD, in-cluster controllers
+# Pods set spec.serviceAccountName: monitoring-bot to use this identity
+#
+# Verify:
+#   kc get sa monitoring-bot -n deamon-monitoring
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring-bot
+  namespace: deamon-monitoring

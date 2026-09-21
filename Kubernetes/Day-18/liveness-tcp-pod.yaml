@@ -1,0 +1,27 @@
+# Liveness probe — TCP socket (goproxy on :8080)
+#
+# FIX vs copied internet example: probe port MUST match containerPort (8080, not 3000)
+# tcpSocket only checks if port is open — no HTTP path needed
+#
+# Verify:
+#   kc apply -f liveness-tcp-pod.yaml
+#   kc get pod liveness-tcp -n probes
+#   kc describe pod liveness-tcp -n probes   # should stay Running
+apiVersion: v1
+kind: Pod
+metadata:
+  name: liveness-tcp
+  namespace: probes
+  labels:
+    app: liveness-tcp
+spec:
+  containers:
+  - name: goproxy
+    image: registry.k8s.io/goproxy:0.1
+    ports:
+    - containerPort: 8080
+    livenessProbe:
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10

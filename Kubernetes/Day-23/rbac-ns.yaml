@@ -1,0 +1,5 @@
+# Namespace for Day 23 RBAC lab (user ht + Role/RoleBinding).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbac

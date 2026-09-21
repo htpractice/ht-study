@@ -1,0 +1,29 @@
+# NodeSelector lab — pod runs ONLY on nodes labeled gpu=true
+#
+# Label a node first (required or pod stays Pending):
+#   kc label node <node-name> gpu=true
+#   kc get nodes --show-labels
+#
+# Unlike tolerations, nodeSelector gives the POD control over node choice.
+#
+# Generate base:
+#   kc run nodeselector-pod --image=nginx --dry-run=client -o yaml > nodeselector-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nodeselector-pod
+  name: nodeselector-pod
+spec:
+  nodeSelector:
+    gpu: "true"
+  containers:
+  - image: nginx
+    name: nodeselector-pod
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 100m
+      limits:
+        memory: 128Mi
+        cpu: 200m

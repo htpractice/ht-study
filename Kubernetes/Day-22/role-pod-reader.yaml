@@ -1,0 +1,17 @@
+# Role — namespace-scoped permissions (who can do what HERE)
+#
+# Rules: get/list/watch pods in rbac-lab only
+# Pair with RoleBinding — not ClusterRole unless cluster-wide access needed
+#
+# Verify:
+#   kc apply -f role-pod-reader.yaml
+#   kc describe role pod-reader -n rbac-lab
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: rbac-lab
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]

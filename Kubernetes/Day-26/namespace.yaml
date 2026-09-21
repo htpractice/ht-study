@@ -1,0 +1,22 @@
+# Namespace labels — required for namespaceSelector in NetworkPolicy
+# (namespace NAME alone is not a label; use kubernetes.io/metadata.name or custom labels)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend-app
+  labels:
+    name: frontend-app
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend-app
+  labels:
+    name: backend-app
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database-app
+  labels:
+    name: database-app

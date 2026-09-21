@@ -1,0 +1,14 @@
+# PVC — explicit bind to static PV via volumeName
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-storage
+  namespace: storage-ns
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: pv-storage

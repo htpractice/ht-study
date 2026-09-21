@@ -1,0 +1,42 @@
+# Liveness probe — HTTP GET (official agnhost pattern, cleaned up)
+#
+# agnhost liveness subcommand serves /healthz on :8080, then starts failing after ~10s
+# → kubelet restarts container when liveness fails
+#
+# readinessProbe included to show difference:
+#   liveness  → fails → RESTART container
+#   readiness → fails → remove from Service endpoints (no restart)
+#
+# Verify:
+#   kc apply -f probes-ns.yaml
+#   kc apply -f liveness-http-pod.yaml
+#   kc get pod liveness-http -n probes -w
+#   kc describe pod liveness-http -n probes   # Liveness probe failed → Restart
+apiVersion: v1
+kind: Pod
+metadata:
+  name: liveness-http
+  namespace: probes
+  labels:
+    app: liveness-http
+spec:
+  containers:
+  - name: agnhost
+    image: registry.k8s.io/e2e-test-images/agnhost:2.40
+    args:
+    - liveness
+    ports:
+    - containerPort: 8080
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 3
+      periodSeconds: 3
+      failureThreshold: 1
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 3
+      periodSeconds: 5
