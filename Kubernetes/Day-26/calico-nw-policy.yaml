@@ -1,0 +1,16 @@
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  namespace: database-app # should be in a namespace of app/pod you want to secure
+  name: allow-traffic-from-backend
+spec:
+  selector: app == 'database'
+  ingress:
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: app == 'backend'
+        namespaceSelector: name == 'backend-app'
+      destination:
+        ports:
+          - 3306

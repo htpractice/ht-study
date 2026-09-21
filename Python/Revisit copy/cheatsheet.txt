@@ -1,0 +1,40 @@
+# Python cheetsheat
+- print (psutils.subprocess.__doc__) -> getting doc for library function
+- print (dir(psutils)) -> will show all the functions ofany command
+- int, str, float, bool -> data types
+- lst -> mutable, tupple -> imuutable, set -> unique, dict -> data structures
+- write a problesm statement in plan english or the language you understand 
+- draft a skeleteon using statements first
+	- eg :  Get the threshold from the user compare it with the cpu_percent every second for 5 sec and print status
+	
+	import psutils
+	
+	threshold = (float(input ("Threshold: ")))
+	
+	for i in (range,5)
+		if psutils.cpu_percentage(interva=1) > threshold:
+			print (f'Unhealthy')
+- To make your code which has libraries, variables,DS and conditionals/loop resusable
+define functions
+
+- requests libraries help you interact with api
+
+- you can import the function from a different file as
+    form <filename/filepath> import <function name>
+    print (call the function)
+
+- using fastapi you can build api with python it can generate /docs with all the details on how to use api bedeafult
+
+- use try and error to prevent crashing f or log file
+
+- OOP gives you encapsulate satte and behaviour in on object
+
+- Imperative(calls API) -> boto3 Declarative(decaler what to do)-> IAC 
+
+- Catch client error in boto3 it comesout from botocore.exceptions import ClientError
+ 
+- most of the time we can check with exit codes the error like 128, 137 in kuve which is 128+9 SigKIL 128+15 SIGTERM
+
+-  troubleshoot api calls using client errros lihe 429,403,404,409
+
+- botot3.seesions comes handy while running multiple env sessions like terraform worspaces to make the blast radius more isolated.

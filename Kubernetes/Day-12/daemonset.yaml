@@ -1,0 +1,38 @@
+# DaemonSet lab — runs one node-exporter pod on every eligible node.
+# Unlike Deployment, there is no replicas field — pod count = node count.
+#
+# Use case: per-node monitoring agent (same pattern as Fluentd, Calico, etc.)
+# On Kind/control-plane nodes: may need tolerations if pods don't appear on all nodes.
+#
+# Generate base:
+#   kc create daemonset daemon-set-node-exporter --image=prom/node-exporter:master-distroless \
+#     -n daemon-monitoring --dry-run=client -o yaml
+#
+# Verify:
+#   kc get ds,pods -n daemon-monitoring -o wide
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: daemon-set-node-exporter
+  namespace: daemon-monitoring
+  labels:
+    app: daemon-set-node-exporter
+spec:
+  selector:
+    matchLabels:
+      app: daemon-set-node-exporter
+  template:
+    metadata:
+      labels:
+        app: daemon-set-node-exporter
+    spec:
+      containers:
+      - name: monitoring-agent
+        image: prom/node-exporter:master-distroless
+        resources:
+          limits:
+            memory: "128Mi"
+          requests:
+            memory: "64Mi"
+        ports:
+        - containerPort: 9100

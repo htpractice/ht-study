@@ -1,0 +1,5 @@
+# Namespace for Day 25 ServiceAccount RBAC lab (course spelling: deamon-monitoring).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deamon-monitoring

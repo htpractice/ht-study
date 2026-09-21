@@ -1,0 +1,38 @@
+# NetworkPolicy — allow ONLY backend pods → database:3306
+#
+# TRAP 1: podSelector alone matches pods in THE SAME namespace as the policy
+#         (database-app) — backend pods live in backend-app → never matches
+#
+# TRAP 2: Two items under `from` are OR'd — wrong YAML blocks everything
+#
+# TRAP 3: namespaceSelector needs a LABEL on the namespace (name: backend-app),
+#         not just metadata.name
+#
+# CORRECT: one `from` entry with BOTH selectors → AND (backend pods IN backend-app ns)
+#
+# Verify:
+#   kc apply -f network-policy.yaml
+#   kc exec -n backend-app deploy/backend -- nc -zv database-svc.database-app.svc.cluster.local 3306
+#   kc exec -n frontend-app deploy/frontend -- nc -zv database-svc.database-app.svc.cluster.local 3306  # should fail
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traffic-from-backend
+  namespace: database-app
+spec:
+  podSelector:
+    matchLabels:
+      app: database
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: backend-app
+      podSelector:
+        matchLabels:
+          app: backend
+    ports:
+    - protocol: TCP
+      port: 3306

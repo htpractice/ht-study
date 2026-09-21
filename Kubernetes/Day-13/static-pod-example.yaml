@@ -1,0 +1,35 @@
+# Static pod reference manifest — DO NOT kubectl apply from your laptop.
+#
+# Static pods are managed by kubelet on a specific node, not the API server.
+# Copy this file TO the control-plane node:
+#   /etc/kubernetes/manifests/static-nginx.yaml
+#
+# Kubelet on that node will create the pod automatically.
+# Remove the file → pod terminates. Restore → pod recreates.
+#
+# On Kind (simulate on control-plane container):
+#   docker exec -it <control-plane-container> bash
+#   vi /etc/kubernetes/manifests/static-nginx.yaml   # paste this content
+#
+# Verify:
+#   kc get pods -n kube-system | grep static-nginx   # mirror pod appears
+#   crictl pods                                      # on the node itself
+#
+# CKA exam: fix broken control plane components by editing manifests here,
+# not by kubectl delete/edit pod.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: static-nginx
+  labels:
+    app: static-nginx
+    tier: demo
+  annotations:
+    description: "Static pod example — managed by kubelet manifest directory"
+spec:
+  hostNetwork: false
+  containers:
+  - name: nginx
+    image: nginx:1.25
+    ports:
+    - containerPort: 80

@@ -1,0 +1,47 @@
+# obs EKS cluster — base Prometheus (dev scrape jobs added in configure-multicluster-eks.sh)
+server:
+  global:
+    scrape_interval: 15s
+  persistentVolume:
+    enabled: false
+
+extraScrapeConfigs: |
+  - job_name: obs-kube-state-metrics
+    static_configs:
+      - targets: ["prometheus-kube-state-metrics.observability.svc.cluster.local:8080"]
+    metric_relabel_configs:
+      - target_label: cluster
+        replacement: obs
+  - job_name: obs-node-exporter
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.*):10250'
+        replacement: '${1}:9100'
+        target_label: __address__
+      - target_label: cluster
+        replacement: obs
+      - target_label: job
+        replacement: node-exporter
+    metric_relabel_configs:
+      - target_label: cluster
+        replacement: obs
+
+alertmanager:
+  enabled: false
+kube-state-metrics:
+  enabled: true
+  prometheus:
+    monitor:
+      enabled: false
+prometheus-node-exporter:
+  enabled: true
+  hostNetwork: true
+  tolerations:
+    - operator: Exists
+  prometheus:
+    monitor:
+      enabled: false
+prometheus-pushgateway:
+  enabled: false
