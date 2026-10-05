@@ -1,0 +1,42 @@
+# kubeadm EC2 lab — no cloud LoadBalancer; NodePort for curl from worker IP
+replicaCount: 3
+
+image:
+  repository: hthaware2508/order-api-lab
+  tag: v1
+  pullPolicy: Always
+  pullSecrets:
+    - dockerhub-creds
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30080
+
+env:
+  logLevel: INFO
+  port: "8080"
+  serviceVersion: v1
+  deploymentEnv: kubeadm-lab
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+prometheus:
+  scrape: true
+  port: "8080"
+  path: /metrics
+
+# Traces: dev order-api → obs OTel collector (NodePort 30317) over peered VPC.
+# Set exporterOtlpEndpoint to obs-master01 private IP if different.
+otel:
+  enabled: true
+  serviceName: order-api
+  exporterOtlpEndpoint: http://10.210.100.57:30317
+  protocol: grpc

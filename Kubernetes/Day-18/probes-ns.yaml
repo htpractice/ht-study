@@ -1,0 +1,5 @@
+# Namespace for Day 18 health probe labs.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: probes

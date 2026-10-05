@@ -1,0 +1,12 @@
+# Scraped by ADOT — do not self-scrape
+prometheusScrape: false
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+replicas: 1

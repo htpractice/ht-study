@@ -1,0 +1,35 @@
+# Liveness probe — exec command (busybox file-check pattern)
+#
+# Flow:
+#   1. Container creates /tmp/healthy, sleeps 30s, deletes file, sleeps 600s
+#   2. livenessProbe: cat /tmp/healthy → success while file exists
+#   3. After ~30s file gone → probe fails → kubelet RESTARTS container
+#
+# Verify:
+#   kc apply -f liveness-exec-pod.yaml
+#   kc get pod liveness-exec -n probes -w
+#   kc describe pod liveness-exec -n probes
+#   kc logs liveness-exec -n probes --previous   # after restart
+apiVersion: v1
+kind: Pod
+metadata:
+  name: liveness-exec
+  namespace: probes
+  labels:
+    app: liveness-exec
+spec:
+  containers:
+  - name: busybox
+    image: registry.k8s.io/busybox:1.36
+    command:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -f /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 1

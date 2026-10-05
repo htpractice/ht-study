@@ -1,0 +1,13 @@
+# PDB drill for cluster-upgrade.md — apply after upgrade-test deployment exists
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: upgrade-test-pdb
+  namespace: default
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: upgrade-test
+# Ensure deployment labels match (if created via kubectl create deployment upgrade-test)
+# kubectl label deployment upgrade-test app=upgrade-test --overwrite

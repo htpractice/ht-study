@@ -1,0 +1,70 @@
+# order-api v2 — OTEL traces + metrics via Collector; logs carry trace_id for Loki ↔ Jaeger correlation
+#
+# Build & push v2 before apply:
+#   cd APP && docker build -t hthaware2508/order-api-lab:v2 . && docker push hthaware2508/order-api-lab:v2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: order-api
+  labels:
+    app: order-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-api
+  template:
+    metadata:
+      labels:
+        app: order-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: order-api
+          image: hthaware2508/order-api-lab:v2
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: LOG_LEVEL
+              value: INFO
+            - name: PORT
+              value: "8080"
+            - name: SERVICE_VERSION
+              value: v2
+            - name: DEPLOYMENT_ENV
+              value: lab
+            # OTEL resource + exporter (gRPC to Collector)
+            - name: OTEL_SERVICE_NAME
+              value: order-api
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.version=v2,deployment.environment=lab
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 8
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

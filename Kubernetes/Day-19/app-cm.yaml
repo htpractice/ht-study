@@ -1,0 +1,16 @@
+# ConfigMap — non-sensitive key/value config (declarative)
+#
+# Consumed by cm-pod via configMapKeyRef → env vars FIRST_NAME, LAST_NAME
+#
+# Verify:
+#   kc apply -f configmaps-ns.yaml
+#   kc apply -f app-cm.yaml
+#   kc get cm app-config -n configmaps -o yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: configmaps
+data:
+  first-name: "harshal"
+  last-name: "thaware"

@@ -1,0 +1,29 @@
+# Pod — mount ConfigMap as files (pairs with pod-cm.yaml env lab)
+#
+# Each CM key → file under /etc/app-config/
+#   first-name  last-name
+#
+# Verify:
+#   kc apply -f pod-cm-volume.yaml
+#   kc exec -it cm-vol-pod -n configmaps -- cat /etc/app-config/first-name
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cm-vol-pod
+  namespace: configmaps
+  labels:
+    app: cm-vol-pod
+spec:
+  volumes:
+  - name: app-config-vol
+    configMap:
+      name: app-config
+  containers:
+  - name: app
+    image: nginx
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: app-config-vol
+      mountPath: /etc/app-config
+      readOnly: true

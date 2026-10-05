@@ -1,0 +1,5 @@
+# Namespace for Day 16 resource limits lab.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resourcelimits

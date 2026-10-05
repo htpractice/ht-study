@@ -1,0 +1,6 @@
+# Namespace for Day 11 multi-container / init container lab.
+# Generate clean manifest: kc create namespace multicon --dry-run=client -o yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: multicon

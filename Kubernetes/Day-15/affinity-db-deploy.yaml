@@ -1,0 +1,44 @@
+# PREFERRED node affinity — nodetype In [db]
+#
+# Scheduler prefers nodes labeled nodetype=db but schedules elsewhere if needed.
+# Lab: kc label node cka-cluster01-worker2 nodetype=db
+# Result: 2/3 pods on worker2, 1/3 on worker — preference not a hard requirement
+#
+# weight: 1–100 — higher weight = stronger preference when multiple rules exist
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: affinity-db-pod
+  name: affinity-db-pod
+  namespace: affinity
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: affinity-db-pod
+  template:
+    metadata:
+      labels:
+        app: affinity-db-pod
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: nodetype
+                operator: In
+                values:
+                - db
+      containers:
+      - name: redis
+        image: redis:latest
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi

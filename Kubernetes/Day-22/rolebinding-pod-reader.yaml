@@ -1,0 +1,24 @@
+# RoleBinding — links Role to Subject (User, Group, or ServiceAccount)
+#
+# ECS parallel: IAM policy (Role rules) attached to principal (RoleBinding subject)
+#
+# Verify permissions:
+#   kc auth can-i list pods \
+#     --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+#   # yes
+#   kc auth can-i delete pods \
+#     --as=system:serviceaccount:rbac-lab:pod-reader-sa -n rbac-lab
+#   # no
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: rbac-lab
+subjects:
+- kind: ServiceAccount
+  name: pod-reader-sa
+  namespace: rbac-lab
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,28 @@
+# Kind cluster for Day 27 storage labs
+#
+# Dynamic StorageClass (local-path):
+#   Kind installs default StorageClass `standard` (rancher.io/local-path) automatically.
+#   No extra config needed — create a PVC only and a PV appears dynamically.
+#
+# Static hostPath PV (optional extraMounts below):
+#   Maps Mac Day-27 directory → control-plane node at /mnt/pv-data (matches pv.yaml).
+#   Pod pinned to control-plane via nodeName in deployment.yaml.
+#   Requires Docker Desktop → Settings → Resources → File Sharing for this path.
+#
+# Workflow:
+#   kind create cluster --config storage-kind.yaml --name cka-storage
+#   kubectl config use-context kind-cka-storage
+#   kubectl get storageclass    # standard (default)
+#   kubectl apply -f storage-ns.yaml -f pv.yaml -f pvc.yaml -f deployment.yaml
+#
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraMounts:
+  - hostPath: /Users/thawarh/Documents/HT-Study/ht-study/Kubernetes/Day-27
+    containerPath: /mnt/pv-data
+    readOnly: false
+    propagation: None   # required on Mac Docker Desktop — Bidirectional not supported
+- role: worker
+- role: worker

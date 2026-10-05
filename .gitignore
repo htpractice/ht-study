@@ -1,0 +1,53 @@
+# Work-related local notes — not part of CKA study track
+Kubernetes/AEP-local-to-k8s/
+
+# Interview prep — local only (company-specific)
+interview-prep/
+
+# Upstream reference clones — re-clone via observability/docs/REFERENCES.md
+observability/application-monitoring-prometheus/
+observability/loki-prometheus-grafana-kubernetes-logging-monitoring/
+observability/prometheus-docker-compose/
+
+# OS / Python artifacts
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.log
+**/venv/
+**/revist/
+
+# Kubeconfig / cluster credentials — never commit
+**/my-cluster-config
+**/*kubeconfig*
+
+# Private keys and locally generated CSRs/certs — never commit
+**/*.key
+**/*.csr
+**/ht.crt
+**/csr/*.crt
+**/monitoring-bot.crt
+**/kubectl-calico
+
+# Terraform — never commit local cache, state, plans, or secrets
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+**/tfplan
+**/tfdestroyplan
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+*_override.tf
+*.auto.tfvars
+**/terraform.tfvars
+**/private_key.pem
+**/plan.txt
+**/destroy-plan.txt
+**/kubectl.sha256
+*.bkp

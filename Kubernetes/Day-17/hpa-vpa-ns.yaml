@@ -1,0 +1,5 @@
+# Namespace for Day 17 HPA/VPA lab.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hpa-vpa

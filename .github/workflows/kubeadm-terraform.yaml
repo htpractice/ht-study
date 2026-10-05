@@ -1,0 +1,257 @@
+# Kubeadm EC2 infra — repo-root workflow (GitLab-style: .github/workflows at project root)
+#
+#   cka-2026-study push/merge  → plan + apply dev AND obs (each waits for env approval)
+#   feature/* PR → cka-2026-study → plan dev + obs only (no apply)
+#   workflow_dispatch → dev | prod | obs → plan, then apply (waits for approval)
+#
+# Configure repo Settings → Environments → dev / prod / obs → Required reviewers
+
+name: Kubeadm Terraform Multi-Env
+
+on:
+  push:
+    branches:
+      - cka-2026-study
+    paths:
+      - "Kubernetes/KubeADM-Day/kubeadm-on-ec2/**"
+  pull_request:
+    branches:
+      - cka-2026-study
+    paths:
+      - "Kubernetes/KubeADM-Day/kubeadm-on-ec2/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (deploy from cka-2026-study)"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+          - obs
+
+env:
+  TF_LOG: INFO
+  AWS_REGION: us-west-2
+  TF_ROOT_BASE: Kubernetes/KubeADM-Day/kubeadm-on-ec2
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  env-matrix:
+    name: Resolve target environments
+    runs-on: ubuntu-latest
+    outputs:
+      tf_envs: ${{ steps.matrix.outputs.tf_envs }}
+    steps:
+      - id: matrix
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVS='["${{ github.event.inputs.environment }}"]'
+          else
+            # push + PR: dev + obs in parallel; prod stays manual-only
+            ENVS='["dev","obs"]'
+          fi
+          echo "tf_envs=${ENVS}" >> "$GITHUB_OUTPUT"
+
+  terraform-plan:
+    name: "Terraform Plan (${{ matrix.tf_env }})"
+    needs: env-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tf_env: ${{ fromJSON(needs.env-matrix.outputs.tf_envs) }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+
+      - name: Set working directory
+        run: |
+          echo "TF_ENV=${{ matrix.tf_env }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_FILE=${{ matrix.tf_env }}.tfvars" >> "$GITHUB_ENV"
+          echo "WORKING_DIRECTORY=${{ env.TF_ROOT_BASE }}/${{ matrix.tf_env }}" >> "$GITHUB_ENV"
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.52.0
+
+      - name: Init TFLint
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: tflint --init
+
+      - name: Run TFLint
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: tflint -f compact
+        continue-on-error: true
+
+      - name: Run Trivy IaC scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: "config"
+          scan-ref: "${{ env.WORKING_DIRECTORY }}"
+          hide-progress: false
+          format: "table"
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform init -input=false
+
+      - name: Terraform Format
+        id: fmt
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        env:
+          TF_VAR_copy_scripts_via_ssh: "false"
+        run: |
+          set -o pipefail
+          terraform plan -var-file="${TF_VAR_FILE}" -no-color -input=false -out=tfplan 2>&1 | tee plan.txt
+        continue-on-error: true
+
+      - name: Comment plan on pull request
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const planPath = '${{ env.WORKING_DIRECTORY }}/plan.txt';
+            let plan = '(plan output not found)';
+            try {
+              plan = fs.readFileSync(planPath, 'utf8');
+              if (plan.length > 60000) plan = plan.slice(0, 60000) + '\n... truncated';
+            } catch (e) {
+              plan = String(e);
+            }
+            const output = `#### Kubeadm Terraform Plan (${{ matrix.tf_env }})
+
+            | Check | Result |
+            |-------|--------|
+            | Format | \`${{ steps.fmt.outcome }}\` |
+            | Init | \`${{ steps.init.outcome }}\` |
+            | Validate | \`${{ steps.validate.outcome }}\` |
+            | Plan | \`${{ steps.plan.outcome }}\` |
+            | Environment | \`${{ matrix.tf_env }}\` |
+            | Directory | \`${{ env.WORKING_DIRECTORY }}\` |
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform
+            ${plan}
+            \`\`\`
+
+            </details>
+
+            *Actor: @${{ github.actor }} · Event: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.tf_env }}
+          path: ${{ env.WORKING_DIRECTORY }}/tfplan
+          if-no-files-found: error
+
+  terraform-apply:
+    name: "Terraform Apply (${{ matrix.tf_env }})"
+    needs: [env-matrix, terraform-plan]
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref_name == 'cka-2026-study')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tf_env: ${{ fromJSON(needs.env-matrix.outputs.tf_envs) }}
+    environment:
+      name: ${{ matrix.tf_env }}
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+
+      - name: Restore env from matrix
+        run: |
+          echo "TF_ENV=${{ matrix.tf_env }}" >> "$GITHUB_ENV"
+          echo "TF_VAR_FILE=${{ matrix.tf_env }}.tfvars" >> "$GITHUB_ENV"
+          echo "WORKING_DIRECTORY=${{ env.TF_ROOT_BASE }}/${{ matrix.tf_env }}" >> "$GITHUB_ENV"
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform init -input=false
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ matrix.tf_env }}
+          path: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Terraform Apply
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform apply -input=false tfplan

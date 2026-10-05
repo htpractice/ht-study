@@ -1,0 +1,15 @@
+# Role — monitoring-bot can read pods in deamon-monitoring
+#
+# verbs: get, list, watch only — NOT create (see practice-output Forbidden)
+#
+# Verify:
+#   kc describe role monitoring-pod-reader -n deamon-monitoring
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: monitoring-pod-reader
+  namespace: deamon-monitoring
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]

@@ -1,0 +1,15 @@
+# Static PV — cluster-scoped (no namespace). hostPath = Kind node filesystem, not Mac paths.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-storage
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  hostPath:
+    path: /mnt/pv-data
+    type: DirectoryOrCreate
+  persistentVolumeReclaimPolicy: Retain

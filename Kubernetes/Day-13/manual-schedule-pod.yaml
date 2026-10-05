@@ -1,0 +1,31 @@
+# Manual scheduling lab — pin a pod to a specific node via nodeName.
+# Bypasses kube-scheduler entirely (CKA break-glass / exam pattern).
+#
+# Before apply:
+#   kc get nodes -o wide                    # pick a node name
+#   vim: replace <node-name> below
+#
+# Generate base:
+#   kc run manual-nginx --image=nginx --dry-run=client -o yaml > manual-schedule-pod.yaml
+#
+# Verify:
+#   kc get pod manual-nginx -o wide       # NODE column must match nodeName
+#   kc describe pod manual-nginx            # no scheduler events
+apiVersion: v1
+kind: Pod
+metadata:
+  name: manual-nginx
+  labels:
+    app: manual-nginx
+    env: day13-lab
+    tier: demo
+  annotations:
+    description: "Day 13 manual scheduling lab — pinned via nodeName"
+    contact: "cka-study"
+spec:
+  nodeName: <node-name>   # e.g. kind-worker (Kind) or ip-10-x-x-x (EKS)
+  containers:
+  - name: nginx
+    image: nginx:1.25
+    ports:
+    - containerPort: 80

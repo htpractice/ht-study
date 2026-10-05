@@ -1,0 +1,33 @@
+# Pod — inject ConfigMap keys as environment variables
+#
+# Pattern: env.valueFrom.configMapKeyRef (one key per env var)
+# Alternative: envFrom.configMapRef (all keys → env vars, names unchanged)
+#
+# Verify:
+#   kc apply -f pod-cm.yaml
+#   kc exec -it cm-pod -n configmaps -- printenv | grep -E 'FIRST|LAST'
+#   kc exec -it cm-pod -n configmaps -- bash -c 'echo $FIRST_NAME $LAST_NAME'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cm-pod
+  namespace: configmaps
+  labels:
+    app: cm-pod
+spec:
+  containers:
+  - name: cm-container
+    image: nginx
+    ports:
+    - containerPort: 80
+    env:
+    - name: FIRST_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: first-name
+    - name: LAST_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: last-name

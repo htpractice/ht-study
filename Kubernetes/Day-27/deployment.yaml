@@ -1,0 +1,29 @@
+# nginx Deployment — nodeName pins pod to control-plane where hostPath data lives (Kind lab)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: storage-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: pvc-storage
+              mountPath: /usr/share/nginx/html
+      volumes:               #volumes for the pvc storage same as the pvc storage in the deployment
+        - name: pvc-storage
+          persistentVolumeClaim:  #persistent volume claim for the pvc storage same as the pvc storage in the deployment
+            claimName: pvc-storage
+      nodeName: cka-cluster01-control-plane

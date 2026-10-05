@@ -1,0 +1,14 @@
+# Helm values for Traefik on kind/minikube — use with port-forward (Option A in traefik-install.md)
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+  name: traefik
+
+service:
+  type: ClusterIP
+
+ports:
+  web:
+    port: 80
+  websecure:
+    port: 443

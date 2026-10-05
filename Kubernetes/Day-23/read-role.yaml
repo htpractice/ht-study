@@ -1,0 +1,15 @@
+# Role — permissions scoped to ONE namespace (rbac)
+#
+# User ht gets these verbs ONLY where RoleBinding exists (namespace rbac)
+#
+# Verify:
+#   kc describe role pod-reader -n rbac
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: rbac
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
